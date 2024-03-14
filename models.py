@@ -11,7 +11,8 @@ class Companies(Base):
     __tablename__ = 'companies'
     __table_args__ = (
         PrimaryKeyConstraint('id', 'name', name='companies_pkey'),
-        UniqueConstraint('id', name='unique_com_id')
+        UniqueConstraint('id', name='unique_com_id'),
+        {'schema': 'private'}
     )
 
     id = mapped_column(BigInteger, nullable=False)
@@ -26,11 +27,12 @@ class Companies(Base):
 class Users(Base):
     __tablename__ = 'users'
     __table_args__ = (
-        ForeignKeyConstraint(['employer'], ['companies.id'], name='employer_fk'),
+        ForeignKeyConstraint(['employer'], ['private.companies.id'], name='employer_fk'),
         PrimaryKeyConstraint('id', 'employer', name='users_pkey'),
         UniqueConstraint('email', name='email_unique'),
         UniqueConstraint('id', name='id_unique'),
-        Index('fki_employer_fk', 'employer')
+        Index('fki_employer_fk', 'employer'),
+        {'schema': 'private'}
     )
 
     id = mapped_column(Integer, nullable=False)
@@ -46,8 +48,9 @@ class Users(Base):
 class Keys(Base):
     __tablename__ = 'keys'
     __table_args__ = (
-        ForeignKeyConstraint(['owner'], ['users.id'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fk'),
-        PrimaryKeyConstraint('id', name='keys_pkey')
+        ForeignKeyConstraint(['owner'], ['private.users.id'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fk'),
+        PrimaryKeyConstraint('id', name='keys_pkey'),
+        {'schema': 'private'}
     )
 
     id = mapped_column(BigInteger)
@@ -62,8 +65,9 @@ class Keys(Base):
 class Passwords(Users):
     __tablename__ = 'passwords'
     __table_args__ = (
-        ForeignKeyConstraint(['id'], ['users.id'], ondelete='CASCADE', onupdate='CASCADE', match='FULL', name='id_fk'),
-        PrimaryKeyConstraint('id', name='passwords_pkey')
+        ForeignKeyConstraint(['id'], ['private.users.id'], ondelete='CASCADE', onupdate='CASCADE', match='FULL', name='id_fk'),
+        PrimaryKeyConstraint('id', name='passwords_pkey'),
+        {'schema': 'private'}
     )
 
     id = mapped_column(Integer)
