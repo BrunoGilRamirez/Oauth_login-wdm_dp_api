@@ -1,5 +1,6 @@
 from typing import List
 from pydantic import BaseModel
+from models import Companies
 
 class CompanyBase(BaseModel):
     name: str
@@ -22,6 +23,7 @@ class UserBase(BaseModel):
     role: str
     email: str
     employer: int
+    secret: str
 
 class UserCreate(UserBase):
     pass
@@ -35,10 +37,10 @@ class User(UserBase):
         from_attributes = True
 
 class KeyBase(BaseModel):
-    owner: int
     value: str
-    registry: str
     valid_until: str
+    owner: str
+    registry: str
 
 class KeyCreate(KeyBase):
     pass
@@ -52,13 +54,17 @@ class Key(KeyBase):
 
 class PasswordBase(BaseModel):
     value: str
+    owner: str
 
 class PasswordCreate(PasswordBase):
     pass
 
 class Password(PasswordBase):
     id: int
-    user: User
 
     class Config:
         from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

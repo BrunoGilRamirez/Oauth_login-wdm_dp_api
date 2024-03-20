@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Information</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #ef7800 ;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #333;
+        color: #fff;
+        padding: 10px 20px;
+    }
+
+    .logo {
+        width: 100px;
+    }
+
+    .navigation {
+        display: flex;
+        gap: 20px;
+    }
+
+    .navigation a {
+        text-decoration: none;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 4px;
+        background-color: #555;
+    }
+
+    .navigation a:hover {
+        background-color: #777;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .table-container {
+        background-color: #fff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    tr:hover {
+        background-color: #f2f2f2;
+    }
+
+    td {
+        word-break: break-word;
+    }
+</style>
+</head>
+<body>
+    <div class="header">
+        <img class="logo" src="/static/Marca.jpg" alt="Logo">
+        <div class="navigation">
+            <a href="#">Inicio</a>
+            <a href="#">Perfil</a>
+            <a href="#">Configuración</a>
+            <a href="#">Cerrar Sesión</a>
+        </div>
+    </div>
+    <h1>User Information</h1>
+    <div class="table-container">
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Secret</th>
+                <th>Company</th>
+                <th>Phone Number</th>
+                <th>Registry</th>
+            </tr>
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.name }}</td>
+                <td>{{ user.role }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.secret }}</td>
+                <td>{{ user.company.name }}</td>
+                <td>{{ user.company.phone_number }}</td>
+                <td>{{ user.company.registry }}</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

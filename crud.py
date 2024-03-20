@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from models import Companies, Users, Keys, Passwords
-from schemas import CompanyCreate, UserCreate, KeyCreate, PasswordCreate
+from schemas import CompanyCreate, UserCreate, KeyCreate, PasswordCreate, User, Company
 
 # Create a new company
 def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
@@ -47,23 +47,62 @@ def delete_company(db: Session, company_id: int) -> bool:
     except Exception as e:
         db.rollback()
         return False
-
+def user_exists(db: Session, user: UserCreate) -> bool:
+    user = db.query(Users).filter(Users.name == user.name, Users.email == user.email, Users.employer == user.employer).first()
+    if user:
+        return True
+    else:
+        return False
 # Create a new user
-def create_user(db: Session, user: UserCreate) -> Users|bool:
+def create_user(db: Session, user: UserCreate) -> bool:
     new_user = Users(**user.model_dump())
     try:
         db.add(new_user)
         db.commit()
         #db.refresh(new_user)
-        return new_user
+        return True
     except Exception as e:
         db.rollback()
         return False
+def get_user_by_user(db: Session, user: UserCreate) -> Users|bool:
+    user = db.query(Users).filter(Users.name == user.name, Users.email == user.email, Users.employer == user.employer).first()
+    if user:
+        return user
+    else:
+        return False
+            
+def get_all_user_info(db: Session, user: UserCreate|None=None, secret: str|None=None) -> User|bool:
+    if user is not None:
+        user = db.query(Users).filter(Users.name == user.name, Users.email == user.email, Users.employer == user.employer).first()
+    else:
+        user = db.query(Users).filter(Users.secret == secret).first()
+    employer = db.query(Companies).filter(Companies.id == user.employer).first()
+    if user and employer:
+        employer_schema = Company(id=employer.id,name=employer.name, phone_number=employer.phone_number, registry=str(employer.registry), email=employer.email)
+        return User(id=user.id, name=user.name, role=user.role, email=user.email, employer=employer.id, secret=user.secret, company=employer_schema)
+    else:
+        return False
+def get_user_by_secret(db: Session, secret: str) -> Users|bool:
+    user = db.query(Users).filter(Users.secret == secret).first()
+    if user:
+        return user
+    else:
+        return False
 
-# Get a user by ID
 def get_user(db: Session, user_id: int):
     return db.query(Users).filter(Users.id == user_id).first()
-
+def get_user_by_name(db: Session, name: str):
+    user = db.query(Users).filter(Users.name == name).first()
+    if user:
+        return user.id
+    else:
+        return False
+def get_user_by_email(db: Session, email: str) -> Users|bool:
+    user = db.query(Users).filter(Users.email == email).first()
+    if user:
+        return user
+    else:
+        return False
 # Get all users
 def get_users(db: Session):
     return db.query(Users).all()
@@ -90,16 +129,21 @@ def delete_user(db: Session, user_id: int):
         return False
 
 # Create a new key
-def create_key(db: Session, key: KeyCreate):
+def create_key(db: Session, key: KeyCreate) -> bool:
+    new_key = Keys(**key.model_dump())
+    db.add(new_key)
     try:
-        new_key = Keys(**key.model_dump())
-        db.add(new_key)
         db.commit()
         #db.refresh(new_key)
-        return new_key
+        return True
     except Exception as e:
         db.rollback()
         return False
+
+def get_keys_by_user(db: Session, user_id: int) -> Keys|bool:
+    return db.query(Keys).filter(Keys.user_id == user_id).all()
+def get_keys_by_value(db: Session, value: str) -> Keys|bool:
+    return db.query(Keys).filter(Keys.value == value).all()
 
 # Get a key by ID
 def get_key(db: Session, key_id: int):
@@ -128,15 +172,15 @@ def delete_key(db: Session, key_id: int):
     return key
 
 # Create a new password
-def create_password(db: Session, password: PasswordCreate) -> Passwords|bool:
+def create_password(db: Session, password: PasswordCreate) -> bool:
     new_password = Passwords(**password.model_dump())
-    try:
-        db.add(new_password)
-        db.commit()
-        return new_password
-    except:
-        db.rollback()
-        return False
+    
+    db.add(new_password)
+    db.commit()
+    return True if get_password_by_owner(db, password.owner) else False
+    #except:
+        #db.rollback()
+        #return False
 
 # Get a password by ID
 def get_password(db: Session, password_id: int):
@@ -165,4 +209,10 @@ def delete_password(db: Session, password_id: int):
         return password
     except Exception as e:
         db.rollback()
+        return False
+def get_password_by_owner(db: Session, owner: str) -> Passwords|bool:
+    password = db.query(Passwords).filter(Passwords.owner == owner).first()
+    if password:
+        return password
+    else:
         return False

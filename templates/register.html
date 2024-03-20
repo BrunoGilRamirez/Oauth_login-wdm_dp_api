@@ -1,32 +1,113 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Registro de Usuarios</title>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <style>
-        /* Estilos CSS aquí */
-    </style>
+<meta charset="UTF-8">
+<title>Registro de Usuarios</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #ef7800 ;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    form {
+        max-width: 400px;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    input[type="submit"] {
+        width: 100%;
+        padding: 10px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    input[type="submit"]:hover {
+        background-color: #45a049;
+    }
+
+    .error-container {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #ef7800 ;
+        color: white;
+        padding: 20px;
+        border-radius: 5px;
+        z-index: 1000;
+    }
+
+    .error-container.active {
+        display: block;
+    }
+</style>
 </head>
 <body>
     <h1>Registro de Usuarios</h1>
-    <form action="/this/register" method="POST">
+    <form action="/UI/register" method="POST">
         <label for="name">Nombre:</label>
         <input type="text" id="name" name="name" required><br><br>
         <label for="role">Rol:</label>
         <input type="text" id="role" name="role" required><br><br>
-        
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required><br><br>
-        
         <label for="employer">Empleador:</label>
         <input type="text" id="employer" name="employer" required><br><br>
-        
+        <label for="password">Contraseña:</label>
+        <input type="password" id="password" name="password" required><br><br>
         <input type="submit" value="Registrarse">
     </form>
-    
+
+    <div class="error-container" id="errorContainer">
+        <p>Error: <span id="errorMessage"></span></p>
+        <button onclick="hideError()">Cerrar</button>
+    </div>
     {% if error %}
-    <p style="color: red;">{{ error }}</p>
+    <script>
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorContainer').classList.add('active');
+        }
+
+        function hideError() {
+            document.getElementById('errorContainer').classList.remove('active');
+        }
+        
+        showError("{{ error }}");
+    </script>
     {% endif %}
 </body>
 </html>

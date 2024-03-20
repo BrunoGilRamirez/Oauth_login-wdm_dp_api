@@ -9,9 +9,9 @@
     <h1>Welcome</h1>
     {% if 'email' in session %}
         <p>Hello, {{ session['email'] }}</p>
-        <a href="/this/logout">Logout</a>
+        <a href="/UI/logout">Logout</a>
     {% else %}
-        <a href="/this/login">Login</a> or <a href="/this/register">Register</a>
+        <a href="/UI/login">Login</a> or <a href="/UI/register">Register</a>
     {% endif %}
 </body>
 </html>

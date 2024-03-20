@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy import BigInteger, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Text, Time, UniqueConstraint
+from sqlalchemy import BigInteger, Column, Date, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
 
@@ -22,12 +22,6 @@ class Companies(Base):
     email = mapped_column(Text)
 
     users: Mapped[List['Users']] = relationship('Users', uselist=True, back_populates='companies')
-    def __repr__(self):
-        return f'Company(id={self.id}, name={self.name}, phone_number={self.phone_number}, registry={self.registry}, email={self.email})'
-    def __str__(self):
-        return f'Company(id={self.id}, name={self.name}, phone_number={self.phone_number}, registry={self.registry}, email={self.email})'
-    def to_dict(self):
-        return {'id': self.id, 'name': self.name, 'phone_number': self.phone_number, 'registry': self.registry, 'email': self.email}
 
 
 class Users(Base):
@@ -52,13 +46,7 @@ class Users(Base):
     companies: Mapped['Companies'] = relationship('Companies', back_populates='users')
     keys: Mapped[List['Keys']] = relationship('Keys', uselist=True, back_populates='users')
     passwords: Mapped['Passwords'] = relationship('Passwords', uselist=False, back_populates='users')
-    def __repr__(self):
-        return f'User(id={self.id}, name={self.name}, role={self.role}, email={self.email}, employer={self.employer}, secret={self.secret})'
-    def __str__(self):
-        return f'User(id={self.id}, name={self.name}, role={self.role}, email={self.email}, employer={self.employer}, secret={self.secret})'
-    def to_dict(self):
-        return {'id': self.id, 'name': self.name, 'role': self.role, 'email': self.email, 'employer': self.employer, 'secret': self.secret}
-    
+
 
 class Keys(Base):
     __tablename__ = 'keys'
@@ -76,12 +64,6 @@ class Keys(Base):
     registry = mapped_column(Date, nullable=False)
 
     users: Mapped['Users'] = relationship('Users', back_populates='keys')
-    def __repr__(self):
-        return f'Key(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until})'
-    def __str__(self):
-        return f'Key(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until})'
-    def to_dict(self):
-        return {'id': self.id, 'owner': self.owner, 'value': self.value, 'registry': self.registry, 'valid_until': self.valid_until}
 
 
 class Passwords(Base):
