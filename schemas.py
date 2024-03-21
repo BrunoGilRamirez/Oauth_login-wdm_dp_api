@@ -1,70 +1,96 @@
 from typing import List
 from pydantic import BaseModel
 from models import Companies
+from pydantic import BaseModel
+from typing import List    
 
-class CompanyBase(BaseModel):
+class CompaniesBase(BaseModel):
     name: str
     phone_number: int
     registry: str
     email: str
-
-class CompanyCreate(CompanyBase):
+class CompaniesCreate(CompaniesBase):
     pass
-
-class Company(CompanyBase):
+class Company(CompaniesBase):
     id: int
     users: List['User'] = []
 
     class Config:
         from_attributes = True
 
-class UserBase(BaseModel):
+class SecurityWordCompaniesBase(BaseModel):
+    owner: int
+    value: str
+class SecurityWordCompaniesCreate(SecurityWordCompaniesBase):
+    pass
+class SecurityWordCompanie(SecurityWordCompaniesBase):
+    class Config:
+        from_attributes = True
+
+class UsersBase(BaseModel):
     name: str
     role: str
     email: str
     employer: int
     secret: str
-
-class UserCreate(UserBase):
+class UsersCreate(UsersBase):
     pass
-
-class User(UserBase):
+class User(UsersBase):
     id: int
+    companies: Company
     keys: List['Key'] = []
-    company: Company
 
     class Config:
         from_attributes = True
 
-class KeyBase(BaseModel):
+class KeysBase(BaseModel):
     value: str
     valid_until: str
     owner: str
     registry: str
-
-class KeyCreate(KeyBase):
+class KeysCreate(KeysBase):
     pass
-
-class Key(KeyBase):
+class Key(KeysBase):
+    users: User
     id: int
-    user: User
-
     class Config:
         from_attributes = True
 
-class PasswordBase(BaseModel):
+class PasswordsBase(BaseModel):
     value: str
     owner: str
-
-class PasswordCreate(PasswordBase):
+class PasswordsCreate(PasswordsBase):
     pass
-
-class Password(PasswordBase):
+class Password(PasswordsBase):
     id: int
 
     class Config:
         from_attributes = True
 
+class SecurityWordBase(BaseModel):
+    word: str
+    owner: str
+class SecurityWordsCreate(SecurityWordBase):
+    pass
+class SecurityWord(SecurityWordBase):
+    class Config:
+        from_attributes = True
+
+class SessionsBase(BaseModel):
+    owner: str
+    registry: str
+    valid_until: str
+    valid: bool
+    metadata_: str
+    value: str
+class SessionsCreate(SessionsBase):
+    pass
+class Session(SessionsBase):
+    id: int
+    users: User
+
+    class Config:
+        from_attributes = True
 class Token(BaseModel):
     access_token: str
     token_type: str

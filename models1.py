@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy import BigInteger, Column, Date, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
 
@@ -22,6 +22,19 @@ class Companies(Base):
     email = mapped_column(Text)
 
     users: Mapped[List['Users']] = relationship('Users', uselist=True, back_populates='companies')
+
+
+class SecurityWordCompanies(Companies):
+    __tablename__ = 'security_word_companies'
+    __table_args__ = (
+        ForeignKeyConstraint(['owner'], ['private.companies.id'], ondelete='CASCADE', onupdate='CASCADE', name='owner'),
+        PrimaryKeyConstraint('owner', name='security_word_companies_pkey'),
+        UniqueConstraint('owner', name='Unq_owner'),
+        {'schema': 'private'}
+    )
+
+    owner = mapped_column(Integer)
+    value = mapped_column(Text, nullable=False)
 
 
 class Users(Base):
@@ -46,6 +59,7 @@ class Users(Base):
     companies: Mapped['Companies'] = relationship('Companies', back_populates='users')
     keys: Mapped[List['Keys']] = relationship('Keys', uselist=True, back_populates='users')
     passwords: Mapped['Passwords'] = relationship('Passwords', uselist=False, back_populates='users')
+    sessions: Mapped[List['Sessions']] = relationship('Sessions', uselist=True, back_populates='users')
 
 
 class Keys(Base):
@@ -81,3 +95,34 @@ class Passwords(Base):
     owner = mapped_column(Text, nullable=False)
 
     users: Mapped['Users'] = relationship('Users', back_populates='passwords')
+
+
+class SecurityWords(Users):
+    __tablename__ = 'security_words'
+    __table_args__ = (
+        ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fkey'),
+        PrimaryKeyConstraint('owner', name='owner_uq'),
+        {'schema': 'private'}
+    )
+
+    word = mapped_column(Text, nullable=False)
+    owner = mapped_column(Text)
+
+
+class Sessions(Base):
+    __tablename__ = 'sessions'
+    __table_args__ = (
+        ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner'),
+        PrimaryKeyConstraint('id', name='sessions_pkey'),
+        {'schema': 'private'}
+    )
+
+    id = mapped_column(BigInteger)
+    owner = mapped_column(Text, nullable=False)
+    registry = mapped_column(DateTime, nullable=False)
+    valid_until = mapped_column(DateTime, nullable=False)
+    valid = mapped_column(Boolean, nullable=False)
+    metadata_ = mapped_column('metadata', Text, nullable=False)
+    value = mapped_column(Text, nullable=False)
+
+    users: Mapped['Users'] = relationship('Users', back_populates='sessions')

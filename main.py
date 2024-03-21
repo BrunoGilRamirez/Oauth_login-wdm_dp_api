@@ -1,23 +1,22 @@
+import os
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
-from fastapi import Depends, FastAPI, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, HTTPBasic, HTTPBasicCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+#local imports
 from models import *
 from schemas import *
 from crud import *
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from session_management import get_session
-from fastapi.middleware.wsgi import WSGIMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+#fastapi imports
+from fastapi import Depends, FastAPI, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import FileResponse,HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import os
+#starlette imports
 from starlette.datastructures import MutableHeaders
-#import status from fastapi
-from fastapi import status
-
+from starlette.middleware import Middleware
+from starlette.middleware.sessions import SessionMiddleware
 
 session_root = get_session('.env')
 #dependency
@@ -28,18 +27,20 @@ def get_db():
     finally:
         db.close()
 
-#----------------- init app ---------------------
-app = FastAPI()
-temp = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
 #----------------- cryptography -----------------
 secret_key_ps = os.getenv('secret_key_ps')
 ALGORITHM = os.getenv('ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES')
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # bcrypt is the hashing algorithm used to hash the password
+cookie_path= os.getenv('path_cookie')
+scheme = os.getenv('cryp_scheme')
+pwd_context = CryptContext(schemes=[scheme], deprecated="auto") # bcrypt is the hashing algorithm used to hash the password
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="key")
 
+#----------------- init app ---------------------
+app = FastAPI()
+temp = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_middleware(SessionMiddleware, secret_key=os.getenv('SECRET_KEY_sessions'), https_only=True)
 # ------------------ security ---------------------
 def generate_user_secret(name:str, role:str, email:str, employer:str):
     #generate a hash of the user data dictionary
@@ -114,8 +115,20 @@ async def register_user(request: Request, session: Session = Depends(get_db)) ->
             return False
     else:
         return "User already exists"
+def request_add_token(request: Request, token: str):
+    new_headers = MutableHeaders(request._headers)
+    new_headers["Authorization"] = f"Bearer {token}"
+    request._headers = new_headers
+    request.scope.update(headers=request.headers.raw)
+    return request
 # ------------------- endpoints -------------------
+@app.middleware("http")
+async def passive_auth(request: Request, call_next):
 
+    response=await call_next(request)
+    ack=request.session.get("access_token")
+    print (f"session {ack}")
+    return response
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     file_name = "favicon.ico"
@@ -123,53 +136,68 @@ async def favicon():
     return FileResponse(path=file_path, headers={"Content-Disposition": "attachment; filename=" + file_name})
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request):
-    return temp.TemplateResponse("index.html", {"request": request})
+    if request.session.get("access_token"):
+        return RedirectResponse(url="/UI/home")
+    else:
+        return temp.TemplateResponse("index.html", {"request": request})
+
 @app.get("/UI/register", response_class=HTMLResponse)
-async def register(request: Request):
-    return temp.TemplateResponse("register.html", {"request": request})
-@app.post("/UI/register")
+@app.post("/UI/register", response_class=HTMLResponse)
 async def register(request: Request, db: Session = Depends(get_db)):
-    feedback = await register_user(request, db)
-    if feedback == True:
-        print("User created")
-        #redirect to login with method GET
-        return RedirectResponse(url="/UI/login", status_code=303)
-    elif feedback == False:
-        return temp.TemplateResponse("register.html", {"request": request, "error": feedback})
-    elif feedback == "User already exists":
-        return temp.TemplateResponse("register.html", {"request": request, "error": feedback})
+    if request.method == "GET":
+        return temp.TemplateResponse("register.html", {"request": request})
+    elif request.method == "POST":
+        feedback = await register_user(request, db)
+        if feedback == True:
+            print("User created")
+            #redirect to login with method GET
+            return RedirectResponse(url="/UI/login", status_code=303)
+        elif feedback == False:
+            return temp.TemplateResponse("register.html", {"request": request, "error": feedback})
+        elif feedback == "User already exists":
+            return temp.TemplateResponse("register.html", {"request": request, "error": feedback})
     
 @app.get("/UI/login", response_class=HTMLResponse)
-async def login(request: Request):
-    return temp.TemplateResponse("login.html", {"request": request, "origin": "UI"})
-@app.post("/UI/login")
+@app.post("/UI/login", response_class=RedirectResponse)
 async def login(request: Request, db: Session = Depends(get_db)):
-    form_data = await request.form()
-    
-    user = authenticate_user(db,form_data['username'], form_data['password'])
-    if not user:
-        return {"error": "Invalid credentials"}
-    access_token_expires = timedelta(days=5)
-    access_token = create_access_token(db,data={"sub": user.secret}, expires_delta=access_token_expires)
-    redirect = RedirectResponse(url="/UI/home")
-    redirect.set_cookie("access_token", access_token, httponly=True)
+    if request.method == "GET":
+        return temp.TemplateResponse("login.html", {"request": request, "origin": "UI"})
+    elif request.method == "POST":
+        form_data = await request.form()
+        user = authenticate_user(db,form_data['username'], form_data['password'])
+        if not user:
+            return {"error": "Invalid credentials"}
+        access_token_expires = timedelta(days=5)
+        access_token = create_access_token(db,data={"sub": user.secret}, expires_delta=access_token_expires)
+        redirect = RedirectResponse(url="/UI/home")
+        request.session['access_token'] = access_token
+        redirect.set_cookie(key="access_token", value=access_token, httponly=True)
 
-    return redirect
+
+        return redirect
 
 @app.get("/UI/home", response_class=HTMLResponse)
 @app.post("/UI/home", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
-    token=request.cookies.get("access_token")
+    token=request.session.get("access_token")
+    if request.method== "GET":
+        pass
+    elif request.method == "POST":
+        pass
     if token:
-        new_headers = MutableHeaders(request._headers)
-        new_headers["Authorization"] = f"Bearer {token}"
-        request._headers = new_headers
-        request.scope.update(headers=request.headers.raw)
+        request_add_token(request, token)
+        sess=request.session.get("access_token")
+        print(f"\nPeticion: {sess}\nAutorizacion: {request.headers.get('Authorization')}")
         user = await get_current_user(request, db)
         return temp.TemplateResponse("home.html", {"request": request, "user": user})
     else:
         return temp.TemplateResponse("index.html", {"request": request})
-
+    
+@app.get("/UI/logout", response_class=RedirectResponse)
+async def logout(request: Request):
+    request.session.clear()
+    response = RedirectResponse(url="/")
+    return response
 @app.post("/key")
 async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db))-> Token:
     user = authenticate_user(session, form_data.username, form_data.password)
