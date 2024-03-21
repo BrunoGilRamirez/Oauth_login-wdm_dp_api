@@ -4,14 +4,14 @@ from models import Companies
 from pydantic import BaseModel
 from typing import List    
 
-class CompaniesBase(BaseModel):
+class CompanyBase(BaseModel):
     name: str
     phone_number: int
     registry: str
     email: str
-class CompaniesCreate(CompaniesBase):
+class CompanyCreate(CompanyBase):
     pass
-class Company(CompaniesBase):
+class Company(CompanyBase):
     id: int
     users: List['User'] = []
 
@@ -27,15 +27,15 @@ class SecurityWordCompanie(SecurityWordCompaniesBase):
     class Config:
         from_attributes = True
 
-class UsersBase(BaseModel):
+class UserBase(BaseModel):
     name: str
     role: str
     email: str
     employer: int
     secret: str
-class UsersCreate(UsersBase):
+class UserCreate(UserBase):
     pass
-class User(UsersBase):
+class User(UserBase):
     id: int
     companies: Company
     keys: List['Key'] = []
@@ -43,25 +43,25 @@ class User(UsersBase):
     class Config:
         from_attributes = True
 
-class KeysBase(BaseModel):
+class KeyBase(BaseModel):
     value: str
     valid_until: str
     owner: str
     registry: str
-class KeysCreate(KeysBase):
+class KeyCreate(KeyBase):
     pass
-class Key(KeysBase):
+class Key(KeyBase):
     users: User
     id: int
     class Config:
         from_attributes = True
 
-class PasswordsBase(BaseModel):
+class PasswordBase(BaseModel):
     value: str
     owner: str
-class PasswordsCreate(PasswordsBase):
+class PasswordCreate(PasswordBase):
     pass
-class Password(PasswordsBase):
+class Password(PasswordBase):
     id: int
 
     class Config:
@@ -70,22 +70,22 @@ class Password(PasswordsBase):
 class SecurityWordBase(BaseModel):
     word: str
     owner: str
-class SecurityWordsCreate(SecurityWordBase):
+class SecurityWordCreate(SecurityWordBase):
     pass
 class SecurityWord(SecurityWordBase):
     class Config:
         from_attributes = True
 
-class SessionsBase(BaseModel):
+class SessionBase(BaseModel):
     owner: str
     registry: str
     valid_until: str
     valid: bool
     metadata_: str
     value: str
-class SessionsCreate(SessionsBase):
+class SessionCreate(SessionBase):
     pass
-class Session(SessionsBase):
+class Session(SessionBase):
     id: int
     users: User
 
