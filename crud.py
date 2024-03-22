@@ -74,6 +74,18 @@ def get_user_by_email(db: Session, email: str) -> Users|bool:
         return user
     else:
         return False
+def get_all_user_info(db: Session, user: UserCreate|None=None, secret: str|None=None) -> User|bool:
+    if user is not None:
+        user = db.query(Users).filter(Users.name == user.name, Users.email == user.email, Users.employer == user.employer).first()
+    else:
+        user = db.query(Users).filter(Users.secret == secret).first()
+    employer = db.query(Companies).filter(Companies.id == user.employer).first()
+    if user and employer:
+        employer_schema = Company(id=employer.id,name=employer.name, phone_number=employer.phone_number, registry=str(employer.registry), email=employer.email)
+        return User(id=user.id, name=user.name, role=user.role, email=user.email, employer=employer.id, secret=user.secret, company=employer_schema)
+    else:
+        return False
+
 def update_user(db: Session, user_id: int, user: UserCreate)-> Users|bool:
     try:
         db.query(Users).filter(Users.id == user_id).update(user.model_dump())
@@ -209,3 +221,4 @@ def delete_session(db: Session, value: str):
     except Exception as e:
         db.rollback()
         return False
+    
