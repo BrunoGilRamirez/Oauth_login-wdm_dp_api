@@ -22,6 +22,7 @@ class Companies(Base):
     email = mapped_column(Text)
 
     users: Mapped[List['Users']] = relationship('Users', uselist=True, back_populates='companies')
+    #------------------------------------- methods -------------------------------------
     def __repr__(self):
         return f'Company(id={self.id}, name={self.name}, phone_number={self.phone_number}, registry={self.registry}, email={self.email})'
     def __str__(self):
@@ -63,7 +64,9 @@ class Users(Base):
     companies: Mapped['Companies'] = relationship('Companies', back_populates='users')
     keys: Mapped[List['Keys']] = relationship('Keys', uselist=True, back_populates='users')
     passwords: Mapped['Passwords'] = relationship('Passwords', uselist=False, back_populates='users')
+    security_words: Mapped[List['SecurityWords']] = relationship('SecurityWords', uselist=True, back_populates='users')
     sessions: Mapped[List['Sessions']] = relationship('Sessions', uselist=True, back_populates='users')
+    #------------------------------------- methods -------------------------------------
     def __repr__(self):
         return f'User(id={self.id}, name={self.name}, role={self.role}, email={self.email}, employer={self.employer}, secret={self.secret})'
     def __str__(self):
@@ -71,7 +74,6 @@ class Users(Base):
     def to_dict(self):
         return {'id': self.id, 'name': self.name, 'role': self.role, 'email': self.email, 'employer': self.employer, 'secret': self.secret}
     
-
 class Keys(Base):
     __tablename__ = 'keys'
     __table_args__ = (
@@ -86,14 +88,16 @@ class Keys(Base):
     valid_until = mapped_column(Date, nullable=False)
     owner = mapped_column(Text, nullable=False)
     registry = mapped_column(Date, nullable=False)
+    valid = mapped_column(Boolean, nullable=False)
+    metadata_ = mapped_column('metadata', Text)
 
-    users: Mapped['Users'] = relationship('Users', back_populates='keys')
+    users: Mapped['Users'] = relationship('Users', back_populates='keys')    #------------------------------------- methods -------------------------------------
     def __repr__(self):
-        return f'Key(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until})'
+        return f'Key(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until}, valid={self.valid})'
     def __str__(self):
-        return f'Key(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until})'
+        return f'Key(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until}, valid={self.valid})'
     def to_dict(self):
-        return {'id': self.id, 'owner': self.owner, 'value': self.value, 'registry': self.registry, 'valid_until': self.valid_until}
+        return {'id': self.id, 'owner': self.owner, 'value': self.value, 'registry': self.registry, 'valid_until': self.valid_until, 'valid': self.valid}
 
 
 class Passwords(Base):
@@ -112,16 +116,20 @@ class Passwords(Base):
 
     users: Mapped['Users'] = relationship('Users', back_populates='passwords')
 
-class SecurityWords(Users):
+class SecurityWords(Base):
     __tablename__ = 'security_words'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fkey'),
-        PrimaryKeyConstraint('owner', name='owner_uq'),
+        PrimaryKeyConstraint('id', name='security_words_pkey'),
+        Index('fki_owner_fkey', 'owner'),
         {'schema': 'private'}
     )
 
     word = mapped_column(Text, nullable=False)
-    owner = mapped_column(Text)
+    owner = mapped_column(Text, nullable=False)
+    id = mapped_column(Integer)
+
+    users: Mapped['Users'] = relationship('Users', back_populates='security_words')
 
 class Sessions(Base):
     __tablename__ = 'sessions'

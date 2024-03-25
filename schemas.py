@@ -39,6 +39,8 @@ class User(UserBase):
     id: int
     companies: Company
     keys: List['Key'] = []
+    security_words: List['SecurityWord'] = []
+    sessions: List['Session'] = []    
 
     class Config:
         from_attributes = True
@@ -48,6 +50,8 @@ class KeyBase(BaseModel):
     valid_until: str
     owner: str
     registry: str
+    valid: bool
+    metadata: str=None
 class KeyCreate(KeyBase):
     pass
 class Key(KeyBase):
@@ -73,6 +77,7 @@ class SecurityWordBase(BaseModel):
 class SecurityWordCreate(SecurityWordBase):
     pass
 class SecurityWord(SecurityWordBase):
+    id: int
     class Config:
         from_attributes = True
 

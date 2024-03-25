@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from models import *
 from schemas import *
-
+from pydantic import ValidationError
 #------------------- Companies -------------------
 def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
     try:
@@ -79,10 +79,12 @@ def get_all_user_info(db: Session, user: UserCreate|None=None, secret: str|None=
         user = db.query(Users).filter(Users.name == user.name, Users.email == user.email, Users.employer == user.employer).first()
     else:
         user = db.query(Users).filter(Users.secret == secret).first()
+        id= user.id
     employer = db.query(Companies).filter(Companies.id == user.employer).first()
     if user and employer:
         employer_schema = Company(id=employer.id,name=employer.name, phone_number=employer.phone_number, registry=str(employer.registry), email=employer.email)
-        return User(id=user.id, name=user.name, role=user.role, email=user.email, employer=employer.id, secret=user.secret, company=employer_schema)
+        return User( id=user.id, name=user.name,role=user.role, email=user.email, employer=user.employer, secret=user.secret, companies=employer_schema)
+        
     else:
         return False
 
@@ -90,13 +92,13 @@ def update_user(db: Session, user_id: int, user: UserCreate)-> Users|bool:
     try:
         db.query(Users).filter(Users.id == user_id).update(user.model_dump())
         db.commit()
-        return get_user(db, user_id)
+        return get_user_by_email(db, user.email)
     except Exception as e:
         db.rollback()
         return False
 def delete_user(db: Session, user_id: int):
     try:
-        user = get_user(db, user_id)
+        user = (db, user_id)
         db.delete(user)
         db.commit()
         return user
@@ -140,13 +142,13 @@ def delete_key(db: Session, key_id: int):
 #------------------- Passwords -------------------
 def create_password(db: Session, password: PasswordCreate) -> bool:
     new_password = Passwords(**password.model_dump())
-    
-    db.add(new_password)
-    db.commit()
-    return True if get_password_by_owner(db, password.owner) else False
-    #except:
-        #db.rollback()
-        #return False
+    try:
+        db.add(new_password)
+        db.commit()
+        return True if get_password_by_owner(db, password.owner) else False
+    except:
+        db.rollback()
+        return False
 def update_password(db: Session, password_id: int, password: PasswordCreate):
     try:
         db.query(Passwords).filter(Passwords.id == password_id).update(password.model_dump())

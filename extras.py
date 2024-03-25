@@ -39,6 +39,12 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 def get_password_hash(password):
     return pwd_context.hash(password)
+def check_if_still_on_valid_time(valid_until: str)->bool:
+    if datetime.now() < valid_until:
+        print("Token is still valid")
+        return True
+    else:
+        return False
 
 #------------------------------------- User utilities -------------------------------------
 async def register_user(request: Request, session: Session = Depends(get_db)) -> bool|str:
@@ -55,7 +61,7 @@ async def register_user(request: Request, session: Session = Depends(get_db)) ->
         employer_id = get_companies_by_name(session, employer)
     secret=generate_user_secret(username, role, email, employer, security_word)
     user = UserCreate(name=username, role=role, email=email, employer=employer_id, secret=secret)
-    sec_word=SecurityWordCreate(owner=secret, value=security_word)
+    sec_word=SecurityWordCreate(owner=secret, word=security_word)
     
     if not user_exists(session, user):
         if create_user(session, user) and create_password(session, PasswordCreate(value=password, owner=user.secret)) and create_security_word(session, sec_word):
@@ -81,35 +87,39 @@ async def get_current_user(request: Request, session: Session = Depends(get_db))
         token = await oauth2_scheme(request)
     except:
         raise credentials_exception
-
     try:
         key = get_keys_by_value(session, token)
-        if key:
-            payload = jwt.decode(token, secret_key_ps, algorithms=[ALGORITHM])
-            secret: str = payload.get("sub")
-            user= get_all_user_info(session, secret=secret)
-            if user:
-                return user
-            else:
-                raise credentials_exception
-        else:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-#------------------------------------- token utilities -------------------------------------
-def create_access_token(session: Session,data: dict, expires_delta: timedelta = None) -> str:
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+    except:
+        pass
+    try:
+        key = get_session_by_value(session, token)
+    except:
+        pass
+    if key and key.valid and check_if_still_on_valid_time(key.valid_until):
+        return decode_and_verify(key.owner, session)
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, secret_key_ps, algorithm=ALGORITHM)
+        raise credentials_exception
+    
+def decode_and_verify(secret: str, db: Session):
+    try:
+        user= get_all_user_info(db, secret=secret)
+        return user
+    except JWTError:
+        return False
+def encrypt_data(data: dict, expires_delta: timedelta):
+    expire = datetime.now(timezone.utc) + expires_delta
+    data.update({"exp": expire})
+    encoded = jwt.encode(data, secret_key_ps, algorithm=ALGORITHM)
+    encrypted = pwd_context.hash(encoded)
+    return encrypted, expire
+#------------------------------------- token utilities -------------------------------------
+def create_access_token(session: Session,data: dict, expires_delta: timedelta) -> str:
+    to_encode = data.copy()
+    encoded_jwt, expire = encrypt_data(to_encode, expires_delta)
     Key_ = KeyCreate(owner=to_encode['sub'], 
                         value=encoded_jwt, 
-                        registry=datetime.now().strftime('%Y-%m-%d'), 
-                        valid_until=expire.strftime('%Y-%m-%d')
+                        registry=datetime.now().strftime('%d/%m/%Y, %H:%M:%S'), 
+                        valid_until=expire.strftime('%d/%m/%Y, %H:%M:%S')
                     )
     if create_key(session, Key_):
         return encoded_jwt
@@ -150,11 +160,5 @@ def delete_user_session(request: Request, db: Session) -> bool:
     token = request.session.get("access_token")
     if token:
         return delete_session(db, token)
-    else:
-        return False
-def create_user_session(db: Session, token: str, user: UserCreate):
-    session = SessionCreate(owner=user.secret, value=token, registry=datetime.now().strftime('%Y-%m-%d'))
-    if create_session(db, session):
-        return True
     else:
         return False

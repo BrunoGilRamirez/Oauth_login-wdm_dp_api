@@ -26,15 +26,15 @@ app.add_middleware(SessionMiddleware, secret_key=os.getenv('SECRET_KEY_sessions'
 async def passive_auth(request: Request, call_next):
     response=await call_next(request)
     ack=request.session.get("access_token")
-    print (f"session {ack}")
     return response
-# --------------------------------------- endpoints ---------------------------------------
+#---------------------------------------- endpoints ---------------------------------------
 #--------------------------- icons --------------------------------
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     file_name = "favicon.ico"
     file_path = os.path.join(app.root_path, "static", file_name)
     return FileResponse(path=file_path, headers={"Content-Disposition": "attachment; filename=" + file_name})
+
 #--------------------------- root --------------------------------
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db)):
@@ -46,8 +46,8 @@ async def read_home(request: Request, db: Session = Depends(get_db)):
         except:
             pass
         return temp.TemplateResponse("index.html", {"request": request})
-#--------------------------- UI --------------------------------
 
+#--------------------------- UI --------------------------------
 @app.get("/UI/register", response_class=HTMLResponse)
 @app.post("/UI/register", response_class=HTMLResponse)
 async def register(request: Request, db: Session = Depends(get_db)):
@@ -56,8 +56,7 @@ async def register(request: Request, db: Session = Depends(get_db)):
     elif request.method == "POST":
         feedback = await register_user(request, db)
         if feedback == True:
-            print("User created")
-            #redirect to login with method GET
+
             return RedirectResponse(url="/UI/login", status_code=303)
         elif feedback == False:
             return temp.TemplateResponse("register.html", {"request": request, "error": feedback})
@@ -74,13 +73,25 @@ async def login(request: Request, db: Session = Depends(get_db)):
         user = authenticate_user(db,form_data['username'], form_data['password'])
         if not user:
             return {"error": "Invalid credentials"}
-        access_token_expires = timedelta(days=5)
-        access_token = create_access_token(db,data={"sub": user.secret}, expires_delta=access_token_expires)
-        redirect = RedirectResponse(url="/UI/home")
-        request.session['access_token'] = access_token
-        redirect.set_cookie(key="access_token", value=access_token, httponly=True)
-
-
+        data={"sub": user.secret}
+        access_token, expires = encrypt_data(data, timedelta(days=14))
+        meta=request.headers.items()
+        meta.append(("client", str(request.client._asdict())))
+        flag=create_session(db, 
+                       SessionCreate(owner=user.secret, 
+                                     registry=datetime.now().strftime('%d/%m/%Y, %H:%M:%S'), 
+                                     valid_until=expires.strftime('%d/%m/%Y, %H:%M:%S'), 
+                                     valid=True, 
+                                     metadata_=str(meta), 
+                                     value=access_token
+                                     )
+                                )
+        if not flag:
+            return temp.TemplateResponse("login.html", {"request": request, "error": "Session creation failed"})
+        else:
+            request.session['access_token'] = access_token 
+            redirect = RedirectResponse(url="/UI/home", status_code=status.HTTP_302_FOUND)
+        
         return redirect
 
 @app.get("/UI/home", response_class=HTMLResponse)
@@ -93,15 +104,18 @@ async def home(request: Request, db: Session = Depends(get_db)):
         pass
     if token:
         request_add_token(request, token)
-        sess=request.session.get("access_token")
-        print(f"\nPeticion: {sess}\nAutorizacion: {request.headers.get('Authorization')}")
         user = await get_current_user(request, db)
+        if not user:
+            request.session.clear()
+            request.form(None)
+            return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("home.html", {"request": request, "user": user})
     else:
         return temp.TemplateResponse("index.html", {"request": request})
     
 @app.get("/UI/logout", response_class=RedirectResponse)
-async def logout(request: Request):
+async def logout(request: Request, db: Session = Depends(get_db)):
+    delete_user_session(request,db=db)
     request.session.clear()
     response = RedirectResponse(url="/")
     return response
