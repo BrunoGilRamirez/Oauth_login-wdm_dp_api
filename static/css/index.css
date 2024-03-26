@@ -1,0 +1,15 @@
+body {
+    background-color: #ef7800;
+}
+
+h1 {
+    text-align: center;
+    margin-top: 100px;
+}
+
+a {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+}
+

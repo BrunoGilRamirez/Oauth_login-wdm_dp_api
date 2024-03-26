@@ -56,6 +56,19 @@
     input[type="submit"]:hover {
         background-color: #45a049;
     }
+    input[type="button"]:hover {
+        background-color: #3d8496;
+    }
+    input[type="button"] {
+        width: 100%;
+        padding: 10px;
+        background-color: #3d8496;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
 
     .error-container {
         display: none;
@@ -91,6 +104,7 @@
         <label for="password">Contraseña:</label>
         <input type="password" id="password" name="password" required><br><br>
         <input type="submit" value="Registrarse">
+        <a href="/UI/login"><input type="button" value="Login"></a>
     </form>
 
     <div class="error-container" id="errorContainer">

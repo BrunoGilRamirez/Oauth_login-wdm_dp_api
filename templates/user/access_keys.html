@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claves de Acceso</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #ef7800;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #333;
+        color: #fff;
+        padding: 10px 20px;
+    }
+
+    .logo {
+        width: 100px;
+    }
+
+    .navigation {
+        display: flex;
+        gap: 20px;
+    }
+
+    .navigation a {
+        text-decoration: none;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 4px;
+        background-color: #555;
+    }
+
+    .navigation a:hover {
+        background-color: #777;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    th, td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+        background-color: #f2f2f2;
+    }
+
+    th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    tr:hover {
+        background-color: #f2f2f2;
+    }
+
+    .delete-btn {
+        padding: 8px 12px;
+        background-color: #f44336;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .delete-btn:hover {
+        background-color: #d32f2f;
+    }
+
+    .new-key-btn {
+        padding: 8px 12px;
+        background-color: #51ca55;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .new-key-btn:hover {
+        background-color: #459659;
+    }
+    .copy-btn {
+        padding: 8px 12px;
+        background-color: #2196F3;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .copy-btn:hover {
+        background-color: #0b7dda;
+    }
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: #fff;
+        border-radius: 20px;
+        padding: 10px 20px;
+        display: none;
+        z-index: 9999;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .toast.show {
+        display: block;
+        animation: fadeOut 3s forwards;
+    }
+
+    @keyframes fadeOut {
+        0% { opacity: 1; }
+        100% { opacity: 0; display: none; }
+    }
+
+    .toast-icon {
+        margin-right: 10px;
+    }
+</style>
+</head>
+<body>
+    <div class="header">
+        <img class="logo" src="/static/weidmueller_logo.svg" alt="Logo">
+        <div class="navigation">
+            <a href="/UI/home">Inicio</a>
+            <a href="/UI/access_keys">Claves de acceso</a>
+            <a href="/UI/user_settings">Configuración de la cuenta</a>
+            <a href="/UI/logout">Cerrar Sesión</a>
+        </div>
+    </div>
+    <h1>Claves de Acceso</h1>
+    <div>
+        <table>
+            <tr>
+                <th>Token de Acceso</th>
+                <th>Creada</th>
+                <th>Expira</th>
+                <th>Acciones</th>
+            </tr>
+            {% for key in keys %}
+            <tr>
+                <td>
+                    <span id="keyValue{{ key.id }}">{{ key.value }}</span>
+                </td>
+                <td>{{ key.registry }}</td>
+                <td>{{ key.valid_until }}</td>
+                <td>
+                    <button class="delete-btn" onclick="deleteKey('{{ key.id }}')">Eliminar</button>
+                    <button class="copy-btn" onclick="copyToClipboard('keyValue{{ key.id }}')">Copiar</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        <button class="new-key-btn" onclick="generateNewKey()">Generar Nueva Llave</button>
+    </div>
+    <div class="toast" id="copyToast">
+        <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
+        <span>Copiado al portapapeles</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+    <script>
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    console.log('Texto copiado al portapapeles:', text);
+                    showCopyToast();
+                })
+                .catch(err => {
+                    console.error('Error al copiar texto al portapapeles:', err);
+                });
+        }
+
+        function showCopyToast() {
+            const toast = document.getElementById('copyToast');
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000); // Mostrar la notificación durante 3 segundos
+        }
+        function deleteKey(keyId) {
+            // Aquí se debe hacer la solicitud POST al servidor para eliminar la clave con el ID proporcionado
+            // Puedes usar Fetch API o Axios para hacer la solicitud
+            // Por ejemplo, utilizando Fetch API:
+            fetch('/UI/access_keys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Delete': keyId,
+                },
+                body: JSON.stringify({ keyId: keyId }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Recargar la página después de eliminar la clave
+                    window.location.reload();
+                } else {
+                    console.error('Error al eliminar la clave');
+                }
+            })
+            .catch(error => {
+                console.error('Error al eliminar la clave:', error);
+            });
+        }
+
+        function generateNewKey() {
+            // Aquí se debe hacer la solicitud POST al servidor para generar una nueva clave
+            // Puedes usar Fetch API o Axios para hacer la solicitud
+            // Por ejemplo, utilizando Fetch API:
+            fetch('/UI/access_keys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Create': 'True',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Recargar la página después de generar la nueva clave
+                    window.location.reload();
+                } else {
+                    console.error('Error al generar una nueva clave');
+                }
+            })
+            .catch(error => {
+                console.error('Error al generar una nueva clave:', error);
+            });
+        }
+    </script>
+</body>
+</html>

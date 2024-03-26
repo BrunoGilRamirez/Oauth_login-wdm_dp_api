@@ -54,6 +54,19 @@
     .container input[type="submit"]:hover {
         background-color: #45a049;
     }
+    .container input[type="button"]:hover {
+        background-color: #3d8496;
+    }
+    .container input[type="button"] {
+        width: 100%;
+        padding: 10px;
+        background-color: #3d8496;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
 
     .error-container {
         background-color: #f44336;
@@ -77,6 +90,7 @@
             <input type="text" name="username" placeholder="Username" required>
             <input type="password" name="password" placeholder="Password" required>
             <input type="submit" value="Login">
+            <a href="/UI/register"><input type="button" value="Register"></a>
         </form>
         {% if error %}
         <div class="error-container">

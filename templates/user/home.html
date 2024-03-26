@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Information</title>
+<title>Home Page</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -81,38 +81,17 @@
 </head>
 <body>
     <div class="header">
-        <img class="logo" src="/static/Marca.jpg" alt="Logo">
+        <img class="logo" src="/static/weidmueller_logo.svg" alt="Logo">
         <div class="navigation">
-            <a href="#">Inicio</a>
-            <a href="#">Perfil</a>
-            <a href="#">Configuración</a>
+            <a href="/UI/home">Inicio</a>
+            <a href="/UI/access_keys">Claves de acceso</a>
+            <a href="/UI/user_settings">Configuración de la cuenta</a>
             <a href="/UI/logout">Cerrar Sesión</a>
         </div>
     </div>
-    <h1>User Information</h1>
-    <div class="table-container">
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Email</th>
-                <th>Secret</th>
-                <th>Company</th>
-                <th>Phone Number</th>
-                <th>Registry</th>
-            </tr>
-            <tr>
-                <td>{{ user.id }}</td>
-                <td>{{ user.name }}</td>
-                <td>{{ user.role }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.secret }}</td>
-                <td>{{ user.companies.name }}</td>
-                <td>{{ user.companies.phone_number }}</td>
-                <td>{{ user.companies.registry }}</td>
-            </tr>
-        </table>
+    <div>
+        <h1>Welcome</h1>
+    </div>
     </div>
 </body>
 </html>
