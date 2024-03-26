@@ -16,8 +16,7 @@
 .container input[type="text"],
 .container input[type="email"],
 .container input[type="password"],
-.container input[type="submit"],
-.container input[type="button"] {
+.container input[type="submit"]{
     width: 100%;
     padding: 10px;
     margin-bottom: 10px;
@@ -34,23 +33,38 @@
     cursor: pointer;
 }
 
-.container input[type="submit"]:hover,
+.container input[type="submit"]:hover{
+    background-color: #3ec94a;
+}
 .container input[type="button"]:hover {
-    background-color: #45a049;
+    background-color: #3d8496;
+}
+.container input[type="button"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #287285;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-sizing: border-box;
 }
 
 .error-container {
-    background-color: #f44336;
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ef7800 ;
     color: white;
+    padding: 20px;
     border-radius: 5px;
-    padding: 10px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
+    z-index: 1000;
 }
 
-.error-icon {
-    margin-right: 10px;
+.error-container.active {
+    display: block;
 }
 
 /* Agrega otros estilos de autenticación aquí si es necesario */
