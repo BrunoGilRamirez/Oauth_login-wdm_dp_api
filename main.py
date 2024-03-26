@@ -45,29 +45,29 @@ async def read_home(request: Request, db: Session = Depends(get_db)):
             request.session.pop("access_token")
         except:
             pass
-        return temp.TemplateResponse("index.html", {"request": request})
+        return RedirectResponse(url="/UI/login")
 
 #--------------------------- UI --------------------------------
 @app.get("/UI/register", response_class=HTMLResponse)
 @app.post("/UI/register", response_class=HTMLResponse)
 async def register(request: Request, db: Session = Depends(get_db)):
     if request.method == "GET":
-        return temp.TemplateResponse("register.html", {"request": request})
+        return temp.TemplateResponse("auth/register.html", {"request": request})
     elif request.method == "POST":
         feedback = await register_user(request, db)
         if feedback == True:
 
             return RedirectResponse(url="/UI/login", status_code=303)
         elif feedback == False:
-            return temp.TemplateResponse("register.html", {"request": request, "error": feedback})
+            return temp.TemplateResponse("auth/register.html", {"request": request, "error": feedback})
         elif feedback == "User already exists":
-            return temp.TemplateResponse("register.html", {"request": request, "error": feedback})
+            return temp.TemplateResponse("auth/register.html", {"request": request, "error": feedback})
     
 @app.get("/UI/login", response_class=HTMLResponse)
 @app.post("/UI/login", response_class=RedirectResponse)
 async def login(request: Request, db: Session = Depends(get_db)):
     if request.method == "GET":
-        return temp.TemplateResponse("login.html", {"request": request, "origin": "UI"})
+        return temp.TemplateResponse("auth/login.html", {"request": request, "origin": "UI"})
     elif request.method == "POST":
         form_data = await request.form()
         user = authenticate_user(db,form_data['username'], form_data['password'])
@@ -87,7 +87,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
                                      )
                                 )
         if not flag:
-            return temp.TemplateResponse("login.html", {"request": request, "error": "Session creation failed"})
+            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:
             request.session['access_token'] = access_token 
             redirect = RedirectResponse(url="/UI/home", status_code=status.HTTP_302_FOUND)
@@ -109,7 +109,7 @@ async def home(request: Request, db: Session = Depends(get_db)):
             request.session.clear()
             request.form(None)
             return RedirectResponse(url="/UI/login")
-        return temp.TemplateResponse("home.html", {"request": request, "user": user})
+        return temp.TemplateResponse("user/home.html", {"request": request, "user": user})
     else:
         return temp.TemplateResponse("index.html", {"request": request})
     
@@ -119,7 +119,46 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     request.session.clear()
     response = RedirectResponse(url="/")
     return response
-
+@app.get("/UI/user_settings", response_class=HTMLResponse)
+@app.post("/UI/user_settings", response_class=HTMLResponse)
+async def user_settings(request: Request, db: Session = Depends(get_db)):
+    token=request.session.get("access_token")
+    if request.method== "GET":
+        pass
+    elif request.method == "POST":
+        pass
+    if token:
+        request_add_token(request, token)
+        user = await get_current_user(request, db)
+        if not user:
+            request.session.clear()
+            request.form(None)
+            return RedirectResponse(url="/UI/login")
+        return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user})
+    else:
+        return temp.TemplateResponse("index.html", {"request": request})
+@app.get("/UI/access_keys", response_class=HTMLResponse)
+@app.post("/UI/access_keys", response_class=HTMLResponse)
+async def access_keys(request: Request, db: Session = Depends(get_db)):
+    token=request.session.get("access_token")
+    if token:
+        request_add_token(request, token)
+        user = await get_current_user(request, db)
+        if request.method== "GET" and user:
+            pass
+        elif request.method == "POST" and user:
+            if request.headers.get('Create')=="True":
+                token= create_access_token(db, data={"sub": user.secret}, expires_delta=timedelta(days=5))
+            if request.headers.get('Delete'):
+                id=int(request.headers.get('Delete'))
+                if not delete_key(db, id):
+                    return temp.TemplateResponse("user/access_keys.html", {"request": request, "user": user, "error": "Key deletion failed"})
+        elif not user:
+            return RedirectResponse(url="/UI/login")
+        keys = get_keys_by_owner(db, user.secret)
+        return temp.TemplateResponse("user/access_keys.html", {"request": request, "user": user, "keys": keys})
+    else:
+        return temp.TemplateResponse("index.html", {"request": request})
 #--------------------------- API --------------------------------
 @app.post("/key")
 async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db))-> Token:

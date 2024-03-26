@@ -117,8 +117,8 @@ def create_key(db: Session, key: KeyCreate) -> bool:
     except Exception as e:
         db.rollback()
         return False
-def get_keys_by_user(db: Session, user_id: int) -> Keys|bool:
-    return db.query(Keys).filter(Keys.user_id == user_id).all()
+def get_keys_by_owner(db: Session, owner: str) -> Keys|bool:
+    return db.query(Keys).filter(Keys.owner == owner).all()
 def get_keys_by_value(db: Session, value: str) -> Keys|bool:
     return db.query(Keys).filter(Keys.value == value).all()
 def get_key(db: Session, key_id: int):
@@ -135,9 +135,13 @@ def update_key(db: Session, key_id: int, key: KeyCreate):
         return False
 def delete_key(db: Session, key_id: int):
     key = get_key(db, key_id)
-    db.delete(key)
-    db.commit()
-    return key
+    try:
+        db.delete(key)
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        return False
 
 #------------------- Passwords -------------------
 def create_password(db: Session, password: PasswordCreate) -> bool:

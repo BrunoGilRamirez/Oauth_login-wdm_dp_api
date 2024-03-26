@@ -85,9 +85,9 @@ class Keys(Base):
 
     id = mapped_column(BigInteger)
     value = mapped_column(Text, nullable=False)
-    valid_until = mapped_column(Date, nullable=False)
+    valid_until = mapped_column(DateTime, nullable=False)
     owner = mapped_column(Text, nullable=False)
-    registry = mapped_column(Date, nullable=False)
+    registry = mapped_column(DateTime, nullable=False)
     valid = mapped_column(Boolean, nullable=False)
     metadata_ = mapped_column('metadata', Text)
 

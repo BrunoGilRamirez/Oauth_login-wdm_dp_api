@@ -41,7 +41,6 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 def check_if_still_on_valid_time(valid_until: str)->bool:
     if datetime.now() < valid_until:
-        print("Token is still valid")
         return True
     else:
         return False
@@ -113,13 +112,20 @@ def encrypt_data(data: dict, expires_delta: timedelta):
     encrypted = pwd_context.hash(encoded)
     return encrypted, expire
 #------------------------------------- token utilities -------------------------------------
-def create_access_token(session: Session,data: dict, expires_delta: timedelta) -> str:
+def create_access_token(session: Session,data: dict, expires_delta: timedelta, request: Request=None) -> str:
+    if request:
+        meta=request.headers.items()
+        meta.append(("client", str(request.client._asdict())))
+    else:
+        meta=None
     to_encode = data.copy()
     encoded_jwt, expire = encrypt_data(to_encode, expires_delta)
-    Key_ = KeyCreate(owner=to_encode['sub'], 
-                        value=encoded_jwt, 
-                        registry=datetime.now().strftime('%d/%m/%Y, %H:%M:%S'), 
-                        valid_until=expire.strftime('%d/%m/%Y, %H:%M:%S')
+    Key_ = KeyCreate(value=encoded_jwt, 
+                     valid_until=expire.strftime('%d/%m/%Y, %H:%M:%S'),
+                     owner=data.get("sub"), 
+                     registry=datetime.now().strftime('%d/%m/%Y, %H:%M:%S'),
+                     valid=True, 
+                     metadata_=str(meta)
                     )
     if create_key(session, Key_):
         return encoded_jwt
