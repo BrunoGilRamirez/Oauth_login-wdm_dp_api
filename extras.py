@@ -69,13 +69,33 @@ async def register_user(request: Request, session: Session = Depends(get_db)) ->
             return False
     else:
         return "User already exists"
-def authenticate_user(session: Session, username: str, password: str):
+def authenticate_user(session: Session, username: str, password: str)-> bool:
     user = get_user_by_email(session, username)
     if not user:
         return False
     if not verify_password(password, get_password_by_owner(session, user.secret).value):
         return False
     return user
+async def get_current_user_API(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token does not exist or is no longer valid",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        key = get_keys_by_value(session, token)
+        if isinstance(key,Keys) and key.valid:
+            if check_if_still_on_valid_time(key.valid_until) is False:
+                raise credentials_exception
+            else:
+                user = decode_and_verify(key.owner, session)
+                print(type(user))
+                if isinstance(user, User):
+                    return True #the user is authenticated
+    except:
+        raise credentials_exception
+    
+
 async def get_current_user(request: Request, session: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -168,3 +188,15 @@ def delete_user_session(request: Request, db: Session) -> bool:
         return delete_session(db, token)
     else:
         return False
+#------------------------------------- validate token or session -------------------------------------
+def validate_token_or_session(token: str, session: Session) -> bool|Keys:
+    try:
+        key = get_keys_by_value(session, token)
+    except:
+        pass
+    try:
+        key = get_session_by_value(session, token)
+    except:
+        pass
+    if key and key.valid and check_if_still_on_valid_time(key.valid_until):
+        return decode_and_verify(key.owner, session)

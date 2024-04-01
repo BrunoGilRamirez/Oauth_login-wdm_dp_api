@@ -111,7 +111,7 @@ async def home(request: Request, db: Session = Depends(get_db)):
             return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("user/home.html", {"request": request, "user": user})
     else:
-        return temp.TemplateResponse("index.html", {"request": request})
+        return temp.TemplateResponse("auth/index.html", {"request": request})
     
 @app.get("/UI/logout", response_class=RedirectResponse)
 async def logout(request: Request, db: Session = Depends(get_db)):
@@ -136,7 +136,7 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
             return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user})
     else:
-        return temp.TemplateResponse("index.html", {"request": request})
+        return temp.TemplateResponse("auth/index.html", {"request": request})
 @app.get("/UI/access_keys", response_class=HTMLResponse)
 @app.post("/UI/access_keys", response_class=HTMLResponse)
 async def access_keys(request: Request, db: Session = Depends(get_db)):
@@ -158,7 +158,7 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
         keys = get_keys_by_owner(db, user.secret)
         return temp.TemplateResponse("user/access_keys.html", {"request": request, "user": user, "keys": keys})
     else:
-        return temp.TemplateResponse("index.html", {"request": request})
+        return temp.TemplateResponse("auth/index.html", {"request": request})
 #--------------------------- API --------------------------------
 @app.post("/key")
 async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db))-> Token:
@@ -173,10 +173,9 @@ async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(),
     access_token = create_access_token(session,data={"sub": user.secret}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
 
-@app.get("/users/me/")
-async def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
-
-@app.get("/users/me/items/")
-async def read_own_items(current_user: User = Depends(get_current_user)):
-    return [{"item_id": "Foo", "owner": current_user.name}]
+@app.get("/token_is_valid")
+async def token_is_valid(flag: bool = Depends(get_current_user_API)):
+    if flag:
+        return {"valid": True}
+    else:
+        return {"valid": False}

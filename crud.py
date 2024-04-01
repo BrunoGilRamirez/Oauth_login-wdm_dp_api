@@ -120,7 +120,7 @@ def create_key(db: Session, key: KeyCreate) -> bool:
 def get_keys_by_owner(db: Session, owner: str) -> Keys|bool:
     return db.query(Keys).filter(Keys.owner == owner).all()
 def get_keys_by_value(db: Session, value: str) -> Keys|bool:
-    return db.query(Keys).filter(Keys.value == value).all()
+    return db.query(Keys).filter(Keys.value == value).first()
 def get_key(db: Session, key_id: int):
     return db.query(Keys).filter(Keys.id == key_id).first()
 def get_keys(db: Session):

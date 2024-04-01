@@ -1,12 +1,4 @@
 
-.table-container {
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 20px;
-}
-
 
 .password-change-container {
     display: none;
@@ -80,8 +72,9 @@
     background-color: #51ca55;
     color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
+    margin: 5px 3px; /* Center the button horizontally */
 }
 
 .new-key-btn:hover {

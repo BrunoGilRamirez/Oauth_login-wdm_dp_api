@@ -44,11 +44,20 @@ h1 {
     text-align: center;
     margin-bottom: 20px;
 }
+.table-container {
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 20px;
+    margin: 10px; /* Agrega un margen de 20px */
+}
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
+    margin-bottom: 4px;
+    
 }
 
 th, td {
