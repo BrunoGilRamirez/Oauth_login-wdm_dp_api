@@ -9,7 +9,7 @@ def get_session(env: str='', remote_hosting:bool=False,verbose=True, override=Tr
     elif load_dotenv(env, verbose=verbose, override=override, interpolate=interpolate):
         print(f"The {env}.env file was loaded")
     if remote_hosting:
-        conecction = GCP_connector(env)
+        conecction = GCP_connector()
     else:
         conecction = custom_connector(env)
     Session = sessionmaker(autocommit=False, autoflush=False,bind=conecction) # We create a sessionmaker for the remote database
