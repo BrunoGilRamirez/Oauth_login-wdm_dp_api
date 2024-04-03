@@ -1,34 +1,35 @@
 import os
-from dotenv import load_dotenv
 from google.cloud.sql.connector import Connector, IPTypes
 import pg8000
 import sqlalchemy
 
 
-def GCP_connector(credentials: str='') -> sqlalchemy.engine.base.Engine:
+def GCP_connector() -> sqlalchemy.engine.base.Engine:
     """
     Initializes a connection pool for a Cloud SQL instance of Postgres.
     Uses the Cloud SQL Python Connector package.
     Returns a SQLAlchemy engine object.
     pool: sqlalchemy.engine.base.Engine
     """
-    if os.environ.get("GCP_INSTANCE") is not None:
-        instance_connection_name = os.environ["GCP_INSTANCE"]  # e.g. 'project:region:instance'
-        db_user = os.environ["DB_USER"]  # e.g. 'my-db-user'
-        db_pass = os.environ["DB_PASS"]  # e.g. 'my-db-password'
-        db_name = os.environ["DB_NAME"]  # e.g. 'my-database'
-        print(db_user)
+    credentials = {
+        "DB_USER": os.environ.get("DB_USER"),
+        "DB_PASS": os.environ.get("DB_PASS"),
+        "DB_NAME": os.environ.get("DB_NAME"),
+        "GCP_INSTANCE": os.environ.get("GCP_INSTANCE"),
+    }
+    missing = check_credentials(credentials)
+    if missing == []:
         ip_type = IPTypes.PRIVATE if os.environ.get("PRIVATE_IP") else IPTypes.PUBLIC
         # initialize Cloud SQL Python Connector object
         connector = Connector()
 
         def getconn() -> pg8000.dbapi.Connection:
             conn: pg8000.dbapi.Connection = connector.connect(
-                instance_connection_name,
+                credentials["GCP_INSTANCE"],
                 "pg8000",
-                user=db_user,
-                password=db_pass,
-                db=db_name,
+                user=credentials["DB_USER"],
+                password=credentials["DB_PASS"],
+                db=credentials["DB_NAME"],
                 ip_type=ip_type,
             )
             return conn # pg8000 will handle closing the connection for us when we are done
@@ -43,25 +44,28 @@ def GCP_connector(credentials: str='') -> sqlalchemy.engine.base.Engine:
         )
         return pool # SQLAlchemy engine object.
     else:
-        print(f'Error loading credentials file.\n\nMake sure you have load the following variables:\nGCP_INSTANCE\nDB_USER\nDB_PASS\nDB_NAME\nPRIVATE_IP\n\nIn the same directory as the rest of files.')
+        print(f"Error loading remote credentials file.\n\nMake sure you have a .env file with the following variables:{missing}\n\nIn the same directory as the rest of files.")
         return None
 
 def custom_connector(credentials: str='') -> sqlalchemy.engine.base.Engine:
     '''This function returns a pool of connections created by create_engine.
     pool: sqlalchemy.engine.base.Engine'''
-    if load_dotenv(credentials, override=True):
-        db_user = os.environ["DB_USER"]  
-        db_pass = os.environ["DB_PASS"]  # e.g. 'my-db-password'
-        db_name = os.environ["DB_NAME"]  # e.g. 'my-database'
-        db_host = os.environ["DB_HOST"]  # e.g. '
-        db_port = os.environ["DB_PORT"]
+    credentials = {
+        "DB_USER": os.environ.get("DB_USER"),
+        "DB_PASS": os.environ.get("DB_PASS"),
+        "DB_NAME": os.environ.get("DB_NAME"),
+        "DB_HOST": os.environ.get("DB_HOST"),
+        "DB_PORT": os.environ.get("DB_PORT"),
+    }
+    missing = check_credentials(credentials)
+    if missing == []:
         def getconn() -> pg8000.dbapi.Connection:
             conn: pg8000.dbapi.Connection = pg8000.connect(
-                user=db_user,
-                password=db_pass,
-                database=db_name,
-                host=db_host,
-                port=db_port,
+                user=credentials["DB_USER"],
+                password=credentials["DB_PASS"],
+                database=credentials["DB_NAME"],
+                host=credentials["DB_HOST"],
+                port=credentials["DB_PORT"],
             )
             return conn # pg8000 will handle closing the connection for us when we are done
         pool = sqlalchemy.create_engine(
@@ -74,5 +78,14 @@ def custom_connector(credentials: str='') -> sqlalchemy.engine.base.Engine:
         )
         return pool # SQLAlchemy engine object.
     else:
-        print(f'Error loading credentials file.\n\nMake sure you have a .env file with the following variables:\nDB_USER\nDB_PASS\nDB_NAME\nDB_HOST\nDB_PORT\n\nIn the same directory as the rest of files.')
+        print(f"Error loading local credentials file.\n\nMake sure you have a .env file with the following variables:{missing}\n\nIn the same directory as the rest of files.")
         return None
+
+def check_credentials(credentials: dict) -> list:
+    '''This function checks if the credentials are valid.
+    credentials: dict'''
+    missing = []
+    for key in list(credentials.keys()):
+        if credentials[key]=="" or credentials[key]==None:
+            missing.append(key)
+    return missing

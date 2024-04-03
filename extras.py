@@ -7,10 +7,10 @@ from crud import *
 from session_management import get_session
 from fastapi.security import OAuth2PasswordBearer
 from starlette.datastructures import MutableHeaders
-from starlette.middleware.sessions import SessionMiddleware
 import os
 
 #------------------------------------- cryptography -------------------------------------
+session_root = get_session('.env.local',remote_hosting=True)
 secret_key_ps = os.getenv('secret_key_ps')
 ALGORITHM = os.getenv('ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES')
@@ -20,7 +20,6 @@ pwd_context = CryptContext(schemes=[scheme], deprecated="auto") # bcrypt is the 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="key")
 
 #------------------------------------- session -------------------------------------
-session_root = get_session('.env')
 
 #------------------------------------- database -------------------------------------
 def get_db():

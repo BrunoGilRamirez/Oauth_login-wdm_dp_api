@@ -2,13 +2,13 @@ services:
   server:
     build:
       context: .
-    command: sh -c "uvicorn main:wdm --host 0.0.0.0 --port 8001"
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8000"
     ports:
       - 8000:8000
     volumes:
       - Oauth_data:/app
     environment:
-      env_file: .env
+      env_file: .env.local
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

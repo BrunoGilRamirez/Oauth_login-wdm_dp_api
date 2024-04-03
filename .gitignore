@@ -5,3 +5,4 @@ __pycache__
 models1.py
 schemas1.py
 /db
+.env.local

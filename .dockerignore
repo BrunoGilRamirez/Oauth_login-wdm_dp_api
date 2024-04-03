@@ -33,6 +33,4 @@
 LICENSE
 README.md
 .db_admin
-*.env
-*.env.*
-env.*
+.hintrc
