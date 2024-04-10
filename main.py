@@ -78,6 +78,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
         access_token, expires = encrypt_data(data, timedelta(days=14))
         meta=request.headers.items()
         meta.append(("client", str(request.client._asdict())))
+        print(f"user secret: {user.secret}")
         flag=create_session(db, 
                        SessionCreate(owner=user.secret, 
                                      registry=datetime.now().strftime('%d/%m/%Y, %H:%M:%S'), 
