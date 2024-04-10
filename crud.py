@@ -204,6 +204,7 @@ def create_session(db: Session, session: SessionCreate) -> bool:
         db.commit()
         return True
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def get_sessions_by_owner(db: Session, owner: str) -> Sessions|bool:
