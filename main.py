@@ -70,7 +70,6 @@ async def login(request: Request, db: Session = Depends(get_db)):
         return temp.TemplateResponse("auth/login.html", {"request": request, "origin": "UI"})
     elif request.method == "POST":
         form_data = await request.form()
-        print("usuario: ",form_data['username'],"password: ",form_data['password'])
         user = authenticate_user(db,form_data['username'], form_data['password'])
         if not user:
             return {"error": "Invalid credentials"}
@@ -78,7 +77,6 @@ async def login(request: Request, db: Session = Depends(get_db)):
         access_token, expires = encrypt_data(data, timedelta(days=14))
         meta=request.headers.items()
         meta.append(("client", str(request.client._asdict())))
-        print(f"user secret: {user.secret}")
         flag=create_session(db, 
                        SessionCreate(owner=user.secret, 
                                      registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
@@ -88,7 +86,6 @@ async def login(request: Request, db: Session = Depends(get_db)):
                                      value=access_token
                                      )
                                 )
-        print("flag: ",flag)
         if not flag:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:

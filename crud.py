@@ -10,6 +10,7 @@ def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
         db.commit()
         return new_company
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def get_company(db: Session, company_id: int):
@@ -28,6 +29,7 @@ def update_company(db: Session, company_id: int, company: CompanyCreate) -> Comp
         db.commit()
         return get_company(db, company_id)
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def delete_company(db: Session, company_id: int) -> bool:
@@ -37,6 +39,7 @@ def delete_company(db: Session, company_id: int) -> bool:
         db.commit()
         return True
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def user_exists(db: Session, user: UserCreate) -> bool:
@@ -54,6 +57,7 @@ def create_user(db: Session, user: UserCreate) -> bool:
         #db.refresh(new_user)
         return True
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def get_user_by_user(db: Session, user: UserCreate) -> Users|bool:
@@ -103,6 +107,7 @@ def delete_user(db: Session, user_id: int):
         db.commit()
         return user
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 
@@ -115,6 +120,7 @@ def create_key(db: Session, key: KeyCreate) -> bool:
         #db.refresh(new_key)
         return True
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def get_keys_by_owner(db: Session, owner: str) -> Keys|bool:
@@ -131,6 +137,7 @@ def update_key(db: Session, key_id: int, key: KeyCreate):
         db.commit()
         return get_key(db, key_id)
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def delete_key(db: Session, key_id: int):
@@ -140,6 +147,7 @@ def delete_key(db: Session, key_id: int):
         db.commit()
         return True
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 
@@ -150,7 +158,8 @@ def create_password(db: Session, password: PasswordCreate) -> bool:
         db.add(new_password)
         db.commit()
         return True if get_password_by_owner(db, password.owner) else False
-    except:
+    except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def update_password(db: Session, password_id: int, password: PasswordCreate):
@@ -159,6 +168,7 @@ def update_password(db: Session, password_id: int, password: PasswordCreate):
         db.commit()
         return True
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def get_password_by_owner(db: Session, owner: str) -> Passwords|bool:
@@ -194,13 +204,14 @@ def update_security_word(db: Session, owner: str, security_word: SecurityWordCre
         db.commit()
         return get_security_word_by_owner(db, owner)
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 #------------------- Sessions -------------------
 def create_session(db: Session, session: SessionCreate) -> bool:
     new_session = Sessions(**session.model_dump())
-    db.add(new_session)
     try:
+        db.add(new_session)
         db.commit()
         return True
     except Exception as e:
@@ -226,6 +237,7 @@ def delete_session(db: Session, value: str):
         db.commit()
         return True
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
     

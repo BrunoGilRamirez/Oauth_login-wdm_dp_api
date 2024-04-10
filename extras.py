@@ -140,9 +140,9 @@ def create_access_token(session: Session,data: dict, expires_delta: timedelta, r
     to_encode = data.copy()
     encoded_jwt, expire = encrypt_data(to_encode, expires_delta)
     Key_ = KeyCreate(value=encoded_jwt, 
-                     valid_until=expire.strftime('%d/%m/%Y, %H:%M:%S'),
+                     valid_until=expire.strftime('%Y-%m-%d %H:%M:%S'),
                      owner=data.get("sub"), 
-                     registry=datetime.now().strftime('%d/%m/%Y, %H:%M:%S'),
+                     registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                      valid=True, 
                      metadata_=str(meta)
                     )
