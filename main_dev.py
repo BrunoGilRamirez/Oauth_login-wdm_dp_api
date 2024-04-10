@@ -79,8 +79,8 @@ async def login(request: Request, db: Session = Depends(get_db)):
         meta.append(("client", str(request.client._asdict())))
         flag=create_session(db, 
                        SessionCreate(owner=user.secret, 
-                                     registry=datetime.now().strftime('%d/%m/%Y, %H:%M:%S'), 
-                                     valid_until=expires.strftime('%d/%m/%Y, %H:%M:%S'), 
+                                     registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                     valid_until=expires.strftime('%Y-%m-%d %H:%M:%S'), 
                                      valid=True, 
                                      metadata_=str(meta), 
                                      value=access_token
