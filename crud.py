@@ -199,8 +199,8 @@ def update_security_word(db: Session, owner: str, security_word: SecurityWordCre
 #------------------- Sessions -------------------
 def create_session(db: Session, session: SessionCreate) -> bool:
     new_session = Sessions(**session.model_dump())
+    db.add(new_session)
     try:
-        db.add(new_session)
         db.commit()
         return True
     except Exception as e:
