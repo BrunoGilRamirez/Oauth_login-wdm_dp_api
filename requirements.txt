@@ -37,7 +37,7 @@ MarkupSafe==2.1.5
 multidict==6.0.5
 numpy==1.26.4
 openpyxl==3.1.2
-orjson==3.9.14
+orjson==3.9.15
 pandas==2.2.1
 passlib==1.7.4
 pg8000==1.30.4
