@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from models import *
 from schemas import *
-from pydantic import ValidationError
 #------------------- Companies -------------------
 def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
     try:

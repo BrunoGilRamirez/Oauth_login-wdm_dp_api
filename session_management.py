@@ -1,14 +1,14 @@
 from sql_connectors import custom_connector, GCP_connector
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
+import os
 
 
-def get_session(env: str='', remote_hosting:bool=False,verbose=True, override=True, interpolate=True) -> sessionmaker|None:
-    if load_dotenv(override=override, verbose=verbose, interpolate=interpolate):
-        print("The .env file was loaded")
-    elif load_dotenv(env, verbose=verbose, override=override, interpolate=interpolate):
+def get_session(env: str='',verbose=True, override=True, interpolate=True) -> sessionmaker|None:
+
+    if load_dotenv(env, verbose=verbose, override=override, interpolate=interpolate):
         print(f"The {env}.env file was loaded")
-    if remote_hosting:
+    if os.getenv("GCP_INSTANCE") and os.getenv("GCP_INSTANCE") != '':
         conecction = GCP_connector()
     else:
         conecction = custom_connector(env)

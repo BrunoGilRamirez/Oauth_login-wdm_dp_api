@@ -10,7 +10,7 @@ from starlette.datastructures import MutableHeaders
 import os
 
 #------------------------------------- cryptography -------------------------------------
-session_root = get_session('.env.local',remote_hosting=True)
+session_root = get_session('.env.local')
 secret_key_ps = os.getenv('secret_key_ps')
 ALGORITHM = os.getenv('ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES')
@@ -96,15 +96,11 @@ async def get_current_user_API(token: str = Depends(oauth2_scheme), session: Ses
     
 
 async def get_current_user(request: Request, session: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    
     try:
         token = await oauth2_scheme(request)
     except:
-        raise credentials_exception
+        raise False
     try:
         key = get_keys_by_value(session, token)
     except:
@@ -116,7 +112,7 @@ async def get_current_user(request: Request, session: Session = Depends(get_db))
     if key and key.valid and check_if_still_on_valid_time(key.valid_until):
         return decode_and_verify(key.owner, session)
     else:
-        raise credentials_exception
+        return False
     
 def decode_and_verify(secret: str, db: Session):
     try:

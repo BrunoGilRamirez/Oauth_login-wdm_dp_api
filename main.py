@@ -115,7 +115,8 @@ async def home(request: Request, db: Session = Depends(get_db)):
     
 @app.get("/UI/logout", response_class=RedirectResponse)
 async def logout(request: Request, db: Session = Depends(get_db)):
-    delete_user_session(request,db=db)
+    print(delete_user_session(request,db=db))
+    
     request.session.clear()
     response = RedirectResponse(url="/")
     return response
