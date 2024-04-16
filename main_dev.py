@@ -73,6 +73,8 @@ async def login(request: Request, db: Session = Depends(get_db)):
         user = authenticate_user(db,form_data['username'], form_data['password'])
         if user is False:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "This user does not exist or the password is incorrect"})
+        elif user.valid is False:
+            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "You need to verify your account with the URL sent to your registered email."})
         data={"sub": user.secret}
         access_token, expires = encrypt_data(data, timedelta(days=14))
         meta=request.headers.items()
@@ -175,6 +177,20 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
         return temp.TemplateResponse("user/access_keys.html", {"request": request, "user": user, "keys": keys})
     else:
         return temp.TemplateResponse("auth/index.html", {"request": request})
+@app.get("/UI/verify/{encoded}")
+async def verify(encoded:str, db: Session = Depends(get_db)):
+    print(encoded)
+    user_secret=decode_varification(encoded)
+    print(user_secret)
+    if user_secret:
+        if verify_user(user_secret,db):
+            return {"message": "User verified"}
+        else:
+            return {"message": "User not verified"}
+    else:
+        return {"message": "User not found"}
+
+    
 #--------------------------- API --------------------------------
 @app.post("/key")
 async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db))-> Token:

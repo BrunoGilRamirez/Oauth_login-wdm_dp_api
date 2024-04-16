@@ -137,6 +137,16 @@ def encrypt_data(data: dict, expires_delta: timedelta):
     encoded = jwt.encode(data, secret_key_ps, algorithm=ALGORITHM)
     encrypted = pwd_context.hash(encoded)
     return encrypted, expire
+def verify_user(secret: str, db: Session):
+    user= get_all_user_info(db, secret=secret)
+    if isinstance(user, User):
+        user.valid=True
+        print(user.valid)
+        confirm= update_user(db, user.id, user)
+        if isinstance(confirm, Users):
+            return True
+        else:
+            return False
 #------------------------------------- token utilities -------------------------------------
 def create_access_token(session: Session,data: dict, expires_delta: timedelta, request: Request=None) -> str:
     if request:
@@ -222,3 +232,10 @@ async def send_email(owner: str|User|Users, subject: str, template: str, context
                                         template=template,
                                         context=context
                                         )
+def decode_varification(encoded:str) -> str|bool:
+    try:
+        payload = jwt.decode(encoded, secret_key_ps, algorithms=[ALGORITHM])
+        secret: str = payload.get("sub")
+        return secret
+    except:
+        return False
