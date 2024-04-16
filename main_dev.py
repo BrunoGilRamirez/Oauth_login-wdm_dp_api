@@ -55,7 +55,7 @@ async def register(request: Request, db: Session = Depends(get_db)):
         return temp.TemplateResponse("auth/register.html", {"request": request})
     elif request.method == "POST":
         feedback = await register_user(request, db)
-        if feedback == True:
+        if isinstance(feedback, str) and feedback != "User already exists":
 
             return RedirectResponse(url="/UI/login", status_code=303)
         elif feedback == False:
@@ -71,24 +71,34 @@ async def login(request: Request, db: Session = Depends(get_db)):
     elif request.method == "POST":
         form_data = await request.form()
         user = authenticate_user(db,form_data['username'], form_data['password'])
-        if not user:
-            return {"error": "Invalid credentials"}
+        if user is False:
+            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "This user does not exist or the password is incorrect"})
         data={"sub": user.secret}
         access_token, expires = encrypt_data(data, timedelta(days=14))
         meta=request.headers.items()
         meta.append(("client", str(request.client._asdict())))
+        meta=str(meta)
         flag=create_session(db, 
                        SessionCreate(owner=user.secret, 
                                      registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
                                      valid_until=expires.strftime('%Y-%m-%d %H:%M:%S'), 
                                      valid=True, 
-                                     metadata_=str(meta), 
+                                     metadata_=meta, 
                                      value=access_token
                                      )
                                 )
         if not flag:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:
+            send_email(owner=user.secret, 
+                       subject="New session", 
+                       template="new_session.html", 
+                       context={"username": user.secret, 
+                                "creation_date": datetime.now().strftime("%d/%m/%Y"), 
+                                "metadata": meta, 
+                                "link":f"{httpsdir}/lockdown/{user.secret}"
+                                }
+                        )
             request.session['access_token'] = access_token 
             redirect = RedirectResponse(url="/UI/home", status_code=status.HTTP_302_FOUND)
         
@@ -107,7 +117,10 @@ async def home(request: Request, db: Session = Depends(get_db)):
         user = await get_current_user(request, db)
         if not user:
             request.session.clear()
-            request.form(None)
+            try:
+                request.form(None)
+            except:
+                pass
             return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("user/home.html", {"request": request, "user": user})
     else:
@@ -132,7 +145,10 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
         user = await get_current_user(request, db)
         if not user:
             request.session.clear()
-            request.form(None)
+            try:
+                request.form(None)
+            except:
+                pass
             return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user})
     else:

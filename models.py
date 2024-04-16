@@ -60,6 +60,7 @@ class Users(Base):
     email = mapped_column(Text, nullable=False)
     employer = mapped_column(Integer, nullable=False)
     secret = mapped_column(Text, nullable=False)
+    valid = mapped_column(Boolean, nullable=False)
 
     companies: Mapped['Companies'] = relationship('Companies', back_populates='users')
     keys: Mapped[List['Keys']] = relationship('Keys', uselist=True, back_populates='users')

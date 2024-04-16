@@ -13,7 +13,7 @@ class Sender:
         self.templates_path = 'templates/e-mails'
         
 
-    def send_email(self, recipient:str, subject:str, message:str, type:str='plain'):
+    def send_email(self, recipient:str, subject:str, message:str, type:str='plain')->bool:
         '''Enviar un correo electrónico simple.
         - recipient: str, dirección de correo del destinatario.
         - subject: str, asunto del correo.
@@ -35,10 +35,12 @@ class Sender:
             server.send_message(msg)
             server.quit()
             print('Correo enviado exitosamente')
+            return True
         except Exception as e:
             print('Error al enviar el correo:', str(e))
+            return False
 
-    def send_template_email(self, recipient:str, subject:str, template:str, context:dict[str, str]=None):
+    def send_template_email(self, recipient:str, subject:str, template:str, context:dict[str, str]=None)->bool:
         '''Enviar un correo electrónico con un template HTML.
         - recipient: str, dirección de correo del destinatario.
         - subject: str, asunto del correo.

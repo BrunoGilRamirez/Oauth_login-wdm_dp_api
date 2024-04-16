@@ -17,16 +17,24 @@
             <input type="submit" value="Login">
             <a href="/UI/register"><input type="button" value="Register"></a>
         </form>
-        {% if error %}
-        <div class="error-container">
-            <div class="error-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                    <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 17.5c-.966 0-1.75-.784-1.75-1.75s.784-1.75 1.75-1.75 1.75.784 1.75 1.75-.784 1.75-1.75 1.75zm.5-11h-1v8h1v-8z"/>
-                </svg>
-            </div>
-            <p>{{ error }}</p>
-        </div>
-        {% endif %}
     </div>
+    <div class="error-container" id="errorContainer">
+        <p>Error: <span id="errorMessage"></span></p>
+        <button onclick="hideError()">Cerrar</button>
+    </div>
+    {% if error %}
+    <script>
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorContainer').classList.add('active');
+        }
+
+        function hideError() {
+            document.getElementById('errorContainer').classList.remove('active');
+        }
+        
+        showError("{{ error }}");
+    </script>
+    {% endif %}
 </body>
 </html>
