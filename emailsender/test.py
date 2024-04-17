@@ -25,13 +25,28 @@ load_dotenv(".env.local")
 email = os.getenv('email')
 password = os.getenv('password')
 sender = Sender(email, password)
+print("-"*50)
 sender.send_template_email(recipient="bruno.syko@gmail.com", 
-                           subject="Test1", 
+                           subject="Test welcome email", 
                            template="welcome.html", 
-                           context={
-                               "username": "Bruno", 
-                               "creation_date": datetime.datetime.now().strftime("%d/%m/%Y"),
-                               "verification_link": "https://www.google.com"
-                               }
+                           context=type_of_context["welcome.html"]
+                        )
+print("-"*50)
+sender.send_template_email(recipient="bruno.syko@gmail.com",
+                            subject="Test new token email",
+                            template="new_token.html",
+                            context=type_of_context["new_token.html"]
                             )
-print("Email sent")
+print("-"*50)
+sender.send_template_email(recipient="bruno.syko@gmail.com",
+                            subject="Test new session email",
+                            template="new_session.html",
+                            context=type_of_context["new_session.html"]
+                            )
+print("-"*50)
+sender.send_template_email(recipient="bruno.syko@gmail.com",
+                            subject="Test password reset email",
+                            template="password_reset.html",
+                            context=type_of_context["password_reset.html"]
+                            )
+print("-"*50)

@@ -86,17 +86,26 @@ def get_all_user_info(db: Session, user: UserCreate|None=None, secret: str|None=
     employer = db.query(Companies).filter(Companies.id == user.employer).first()
     if user and employer:
         employer_schema = Company(id=employer.id,name=employer.name, phone_number=employer.phone_number, registry=str(employer.registry), email=employer.email)
-        return User( id=user.id, name=user.name,role=user.role, email=user.email, employer=user.employer, secret=user.secret, companies=employer_schema)
+        return User( id=user.id, name=user.name,role=user.role, email=user.email, employer=user.employer, secret=user.secret, companies=employer_schema, valid=user.valid)
         
     else:
         return False
 
-def update_user(db: Session, user_id: int, user: UserCreate)-> Users|bool:
+def update_user(db: Session, user_id: int, user: User) -> Users|bool:
     try:
-        db.query(Users).filter(Users.id == user_id).update(user.model_dump())
+        db.query(Users).filter(Users.id == user_id).update({
+            Users.id: user.id,
+            Users.name: user.name,
+            Users.role: user.role,
+            Users.email: user.email,
+            Users.employer: user.employer,
+            Users.secret: user.secret,
+            Users.valid: user.valid
+        })
         db.commit()
         return get_user_by_email(db, user.email)
     except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
 def delete_user(db: Session, user_id: int):

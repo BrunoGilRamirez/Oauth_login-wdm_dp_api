@@ -4,6 +4,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Request
 from crud import *
+from emailsender.sender import Sender
 from session_management import get_session
 from fastapi.security import OAuth2PasswordBearer
 from starlette.datastructures import MutableHeaders
@@ -16,8 +17,10 @@ ALGORITHM = os.getenv('ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES')
 cookie_path= os.getenv('path_cookie')
 scheme = os.getenv('cryp_scheme')
+httpsdir = os.getenv('httpsdir')
 pwd_context = CryptContext(schemes=[scheme], deprecated="auto") # bcrypt is the hashing algorithm used to hash the password
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="key")
+messenger = Sender(os.getenv('email'), os.getenv('password'))
 
 #------------------------------------- session -------------------------------------
 
@@ -58,17 +61,25 @@ async def register_user(request: Request, session: Session = Depends(get_db)) ->
         create_company(session, CompanyCreate(name=employer, phone_number=0, registry=datetime.now().strftime('%Y-%m-%d'), email='not given'))
         employer_id = get_companies_by_name(session, employer)
     secret=generate_user_secret(username, role, email, employer, security_word)
-    user = UserCreate(name=username, role=role, email=email, employer=employer_id, secret=secret)
+    user = UserCreate(name=username, role=role, email=email, employer=employer_id, secret=secret, valid=False)
     sec_word=SecurityWordCreate(owner=secret, word=security_word)
-    
+    encoded_secret = jwt.encode({"sub": secret}, secret_key_ps, algorithm=ALGORITHM)
     if not user_exists(session, user):
-        if create_user(session, user) and create_password(session, PasswordCreate(value=password, owner=user.secret)) and create_security_word(session, sec_word):
-            return True
-        else:
-            return False
+        if messenger.send_template_email(recipient=email,
+                                         subject="Welcome to Weidmüller Data Product API",
+                                         template="welcome.html",
+                                         context={"username": username, 
+                                                  "creation_date": datetime.now().strftime("%d/%m/%Y"),
+                                                  "verification_link": f"{httpsdir}/UI/verify/{encoded_secret}"
+                                                 }
+                                        ):
+            if create_user(session, user) and create_password(session, PasswordCreate(value=password, owner=user.secret)) and create_security_word(session, sec_word):
+                return secret
+            else:
+                return False
     else:
         return "User already exists"
-def authenticate_user(session: Session, username: str, password: str)-> bool:
+def authenticate_user(session: Session, username: str, password: str)-> bool|Users:
     user = get_user_by_email(session, username)
     if not user:
         return False
@@ -126,23 +137,35 @@ def encrypt_data(data: dict, expires_delta: timedelta):
     encoded = jwt.encode(data, secret_key_ps, algorithm=ALGORITHM)
     encrypted = pwd_context.hash(encoded)
     return encrypted, expire
+def verify_user(secret: str, db: Session):
+    user= get_all_user_info(db, secret=secret)
+    if isinstance(user, User):
+        user.valid=True
+        print(user.valid)
+        confirm= update_user(db, user.id, user)
+        if isinstance(confirm, Users):
+            return True
+        else:
+            return False
 #------------------------------------- token utilities -------------------------------------
-def create_access_token(session: Session,data: dict, expires_delta: timedelta, request: Request=None) -> str:
+async def create_access_token(session: Session,data: dict, expires_delta: timedelta, request: Request=None) -> str:
     if request:
         meta=request.headers.items()
         meta.append(("client", str(request.client._asdict())))
     else:
         meta=None
     to_encode = data.copy()
+    owner=to_encode.get("sub")
     encoded_jwt, expire = encrypt_data(to_encode, expires_delta)
     Key_ = KeyCreate(value=encoded_jwt, 
                      valid_until=expire.strftime('%Y-%m-%d %H:%M:%S'),
-                     owner=data.get("sub"), 
+                     owner=owner, 
                      registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                      valid=True, 
                      metadata_=str(meta)
                     )
     if create_key(session, Key_):
+        await send_email(session,data.get("sub"), "New session", "new_session.html", {"username": data.get("sub"), "creation_date": datetime.now().strftime("%d/%m/%Y"), "metadata": meta, "link":f"{httpsdir}/lockdown/{owner}"})
         return encoded_jwt
     else:
         return False
@@ -195,3 +218,24 @@ def validate_token_or_session(token: str, session: Session) -> bool|Keys:
         pass
     if key and key.valid and check_if_still_on_valid_time(key.valid_until):
         return decode_and_verify(key.owner, session)
+#------------------------------------- async mail sender -------------------------------------
+async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None):
+
+    if isinstance(owner, str):
+        user = get_all_user_info(db=db, secret=owner)
+        email= user.email
+    else:
+        email= owner.email
+    if isinstance(user, User):
+        messenger.send_template_email(recipient=email,
+                                        subject=subject,
+                                        template=template,
+                                        context=context
+                                        )
+def decode_varification(encoded:str) -> str|bool:
+    try:
+        payload = jwt.decode(encoded, secret_key_ps, algorithms=[ALGORITHM])
+        secret: str = payload.get("sub")
+        return secret
+    except:
+        return False

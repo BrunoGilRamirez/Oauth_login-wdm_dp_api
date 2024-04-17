@@ -55,7 +55,7 @@ async def register(request: Request, db: Session = Depends(get_db)):
         return temp.TemplateResponse("auth/register.html", {"request": request})
     elif request.method == "POST":
         feedback = await register_user(request, db)
-        if feedback == True:
+        if isinstance(feedback, str) and feedback != "User already exists":
 
             return RedirectResponse(url="/UI/login", status_code=303)
         elif feedback == False:
@@ -71,24 +71,36 @@ async def login(request: Request, db: Session = Depends(get_db)):
     elif request.method == "POST":
         form_data = await request.form()
         user = authenticate_user(db,form_data['username'], form_data['password'])
-        if not user:
-            return {"error": "Invalid credentials"}
+        if user is False:
+            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "This user does not exist or the password is incorrect"})
+        elif user.valid is False:
+            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "You need to verify your account with the URL sent to your registered email."})
         data={"sub": user.secret}
         access_token, expires = encrypt_data(data, timedelta(days=14))
         meta=request.headers.items()
         meta.append(("client", str(request.client._asdict())))
+        meta=str(meta)
         flag=create_session(db, 
                        SessionCreate(owner=user.secret, 
                                      registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
                                      valid_until=expires.strftime('%Y-%m-%d %H:%M:%S'), 
                                      valid=True, 
-                                     metadata_=str(meta), 
+                                     metadata_=meta, 
                                      value=access_token
                                      )
                                 )
         if not flag:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:
+            await send_email(db,owner=user.secret, 
+                       subject="New session", 
+                       template="new_session.html", 
+                       context={"username": user.secret, 
+                                "creation_date": datetime.now().strftime("%d/%m/%Y"), 
+                                "metadata": meta, 
+                                "link":f"{httpsdir}/lockdown/{user.secret}"
+                                }
+                        )
             request.session['access_token'] = access_token 
             redirect = RedirectResponse(url="/UI/home", status_code=status.HTTP_302_FOUND)
         
@@ -107,7 +119,10 @@ async def home(request: Request, db: Session = Depends(get_db)):
         user = await get_current_user(request, db)
         if not user:
             request.session.clear()
-            request.form(None)
+            try:
+                request.form(None)
+            except:
+                pass
             return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("user/home.html", {"request": request, "user": user})
     else:
@@ -132,7 +147,10 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
         user = await get_current_user(request, db)
         if not user:
             request.session.clear()
-            request.form(None)
+            try:
+                request.form(None)
+            except:
+                pass
             return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user})
     else:
@@ -148,7 +166,7 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
             pass
         elif request.method == "POST" and user:
             if request.headers.get('Create')=="True":
-                token= create_access_token(db, data={"sub": user.secret}, expires_delta=timedelta(days=5))
+                token= await create_access_token(db, data={"sub": user.secret}, expires_delta=timedelta(days=5))
             if request.headers.get('Delete'):
                 id=int(request.headers.get('Delete'))
                 if not delete_key(db, id):
@@ -159,6 +177,20 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
         return temp.TemplateResponse("user/access_keys.html", {"request": request, "user": user, "keys": keys})
     else:
         return temp.TemplateResponse("auth/index.html", {"request": request})
+@app.get("/UI/verify/{encoded}")
+async def verify(encoded:str, db: Session = Depends(get_db)):
+    print(encoded)
+    user_secret=decode_varification(encoded)
+    print(user_secret)
+    if user_secret:
+        if verify_user(user_secret,db):
+            return {"message": "User verified"}
+        else:
+            return {"message": "User not verified"}
+    else:
+        return {"message": "User not found"}
+
+    
 #--------------------------- API --------------------------------
 @app.post("/key")
 async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db))-> Token:
@@ -170,7 +202,7 @@ async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(),
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(days=float(5))
-    access_token = create_access_token(session,data={"sub": user.secret}, expires_delta=access_token_expires)
+    access_token = await create_access_token(session,data={"sub": user.secret}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
 
 @app.get("/token_is_valid")

@@ -33,6 +33,7 @@ class UserBase(BaseModel):
     email: str
     employer: int
     secret: str
+    valid: bool
 class UserCreate(UserBase):
     pass
 class User(UserBase):
