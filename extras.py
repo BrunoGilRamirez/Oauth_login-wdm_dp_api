@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Request
 from crud import *
-from emailsender.Sender import Sender
+from emailsender.sender import Sender
 from session_management import get_session
 from fastapi.security import OAuth2PasswordBearer
 from starlette.datastructures import MutableHeaders
@@ -148,7 +148,7 @@ def verify_user(secret: str, db: Session):
         else:
             return False
 #------------------------------------- token utilities -------------------------------------
-def create_access_token(session: Session,data: dict, expires_delta: timedelta, request: Request=None) -> str:
+async def create_access_token(session: Session,data: dict, expires_delta: timedelta, request: Request=None) -> str:
     if request:
         meta=request.headers.items()
         meta.append(("client", str(request.client._asdict())))
@@ -165,7 +165,7 @@ def create_access_token(session: Session,data: dict, expires_delta: timedelta, r
                      metadata_=str(meta)
                     )
     if create_key(session, Key_):
-        send_email(data.get("sub"), "New session", "new_session.html", {"username": data.get("sub"), "creation_date": datetime.now().strftime("%d/%m/%Y"), "metadata": meta, "link":f"{httpsdir}/lockdown/{owner}"})
+        await send_email(session,data.get("sub"), "New session", "new_session.html", {"username": data.get("sub"), "creation_date": datetime.now().strftime("%d/%m/%Y"), "metadata": meta, "link":f"{httpsdir}/lockdown/{owner}"})
         return encoded_jwt
     else:
         return False
@@ -219,10 +219,10 @@ def validate_token_or_session(token: str, session: Session) -> bool|Keys:
     if key and key.valid and check_if_still_on_valid_time(key.valid_until):
         return decode_and_verify(key.owner, session)
 #------------------------------------- async mail sender -------------------------------------
-async def send_email(owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None):
+async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None):
 
     if isinstance(owner, str):
-        user = get_all_user_info(owner)
+        user = get_all_user_info(db=db, secret=owner)
         email= user.email
     else:
         email= owner.email

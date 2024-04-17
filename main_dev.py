@@ -92,7 +92,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
         if not flag:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:
-            send_email(owner=user.secret, 
+            await send_email(db,owner=user.secret, 
                        subject="New session", 
                        template="new_session.html", 
                        context={"username": user.secret, 
@@ -166,7 +166,7 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
             pass
         elif request.method == "POST" and user:
             if request.headers.get('Create')=="True":
-                token= create_access_token(db, data={"sub": user.secret}, expires_delta=timedelta(days=5))
+                token= await create_access_token(db, data={"sub": user.secret}, expires_delta=timedelta(days=5))
             if request.headers.get('Delete'):
                 id=int(request.headers.get('Delete'))
                 if not delete_key(db, id):
@@ -202,7 +202,7 @@ async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(),
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(days=float(5))
-    access_token = create_access_token(session,data={"sub": user.secret}, expires_delta=access_token_expires)
+    access_token = await create_access_token(session,data={"sub": user.secret}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
 
 @app.get("/token_is_valid")
