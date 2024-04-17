@@ -165,7 +165,7 @@ async def create_access_token(session: Session,data: dict, expires_delta: timede
                      metadata_=str(meta)
                     )
     if create_key(session, Key_):
-        await send_email(session,data.get("sub"), "New session", "new_session.html", {"username": data.get("sub"), "creation_date": datetime.now().strftime("%d/%m/%Y"), "metadata": meta, "link":f"{httpsdir}/lockdown/{owner}"})
+        await send_email(session,data.get("sub"), "New Token", "new_token.html", { "creation_date": datetime.now().strftime("%d/%m/%Y"), "new_token": encoded_jwt})
         return encoded_jwt
     else:
         return False
@@ -224,8 +224,11 @@ async def send_email(db:Session, owner: str|User|Users, subject: str, template: 
     if isinstance(owner, str):
         user = get_all_user_info(db=db, secret=owner)
         email= user.email
+        name = user.name
     else:
         email= owner.email
+        name = owner.name
+    context['username']=name
     if isinstance(user, User):
         messenger.send_template_email(recipient=email,
                                         subject=subject,
