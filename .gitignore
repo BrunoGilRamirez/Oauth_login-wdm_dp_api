@@ -6,3 +6,4 @@ models1.py
 schemas1.py
 /db
 .env.local
+.vscode

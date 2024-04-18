@@ -46,6 +46,10 @@ def check_if_still_on_valid_time(valid_until: str)->bool:
         return True
     else:
         return False
+def lockdown_user(db: Session, code: str, user: Users):
+    pass
+def generate_security_code(db: Session, user: Users):
+    pass
 
 #------------------------------------- User utilities -------------------------------------
 async def register_user(request: Request, session: Session = Depends(get_db)) -> bool|str:
