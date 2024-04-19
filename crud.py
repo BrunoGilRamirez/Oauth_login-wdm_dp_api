@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import *
+from models.models import *
 from schemas import *
 #------------------- Companies -------------------
 def create_company(db: Session, company: CompanyCreate) -> Companies|bool:

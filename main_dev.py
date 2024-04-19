@@ -1,6 +1,6 @@
 import os
 #local imports
-from models import *
+from models.models import *
 from schemas import *
 from crud import *
 from extras import *
