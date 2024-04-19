@@ -93,12 +93,12 @@ async def login(request: Request, db: Session = Depends(get_db)):
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:
             await send_email(db,owner=user.secret, 
-                       subject="New session", 
+                       subject="Nuevo inicio de sesión", 
                        template="new_session.html", 
-                       context={"username": user.secret, 
+                       context={"username": user.name, 
                                 "creation_date": datetime.now().strftime("%d/%m/%Y"), 
                                 "metadata": meta, 
-                                "link":f"{httpsdir}/lockdown/{user.secret}"
+                                "link":f"{httpsdir}/lockdown/{encode_secret(user.secret)}"
                                 }
                         )
             request.session['access_token'] = access_token 
@@ -189,8 +189,8 @@ async def verify(encoded:str, db: Session = Depends(get_db)):
             return {"message": "User not verified"}
     else:
         return {"message": "User not found"}
-@app.get("/UI/lockdown/{encoded}", include_in_schema=False)
-@app.post("/UI/lockdown/{encoded}", include_in_schema=False)
+@app.get("/lockdown/{encoded}", include_in_schema=False)
+@app.post("/lockdown/{encoded}", include_in_schema=False)
 async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db)):
     '''When this endpoint is called, it sends a security code to the user's email.
     If the request is a POST, it will reset the user's password and disable all the user's sessions and tokens if the security code is correct.'''
@@ -201,8 +201,8 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
             return {"message": "User not found"}
         if request.method == "GET":
             code = generate_security_code(db, user)
-            send_email(db,owner=user,subject="Lockdown Code",template="lockdown.html",context={"username": user.name, "code": code}) 
-            return temp.TemplateResponse("auth/lockdown.html", {"request": request, "message": "Code sent to your email."})#aqui te quedaste
+            await send_email(db,owner=user,subject="Lockdown Code",template="lockdown.html",context={"username": user.name, "code": code}) 
+            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "message": "Code sent to your email."})#aqui te quedaste
         elif request.method == "POST":
             form = await request.form()
             code = form['code']
@@ -210,7 +210,7 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
             if feedback:
                 return RedirectResponse(url="/UI/login", status_code=303)
             else:
-                return temp.TemplateResponse("auth/lockdown.html", {"request": request, "error": "Lockdown failed"})
+                return temp.TemplateResponse("auth/change_pass.html", {"request": request, "error": "Lockdown failed"})
 
 
 

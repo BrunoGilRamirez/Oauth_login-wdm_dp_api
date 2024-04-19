@@ -49,7 +49,7 @@ def check_if_still_on_valid_time(valid_until: str)->bool:
 def lockdown_user(db: Session, code: str, user: Users):
     pass
 def generate_security_code(db: Session, user: Users):
-    pass
+    pass# ya existe la tabla, solo genera el modelo y el crud.
 
 #------------------------------------- User utilities -------------------------------------
 async def register_user(request: Request, session: Session = Depends(get_db)) -> bool|str:
@@ -67,7 +67,7 @@ async def register_user(request: Request, session: Session = Depends(get_db)) ->
     secret=generate_user_secret(username, role, email, employer, security_word)
     user = UserCreate(name=username, role=role, email=email, employer=employer_id, secret=secret, valid=False)
     sec_word=SecurityWordCreate(owner=secret, word=security_word)
-    encoded_secret = jwt.encode({"sub": secret}, secret_key_ps, algorithm=ALGORITHM)
+    encoded_secret = encode_secret(secret)
     if not user_exists(session, user):
         if messenger.send_template_email(recipient=email,
                                          subject="Welcome to Weidmüller Data Product API",
@@ -233,7 +233,7 @@ async def send_email(db:Session, owner: str|User|Users, subject: str, template: 
         email= owner.email
         name = owner.name
     context['username']=name
-    if isinstance(user, User):
+    if isinstance(owner, User) or isinstance(owner, Users):
         messenger.send_template_email(recipient=email,
                                         subject=subject,
                                         template=template,
@@ -246,3 +246,5 @@ def decode_varification(encoded:str) -> str|bool:
         return secret
     except:
         return False
+def encode_secret(secret: str) -> str:
+    return jwt.encode({"sub": secret}, secret_key_ps, algorithm=ALGORITHM)
