@@ -119,6 +119,30 @@ def delete_user(db: Session, user_id: int):
         db.rollback()
         return False
 
+#------------------- Codes -------------------
+def create_code(db: Session, code: CodeCreate) -> bool:
+    new_code = Codes(**code.model_dump())
+    try:
+        db.add(new_code)
+        db.commit()
+        return True
+    except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        db.rollback()
+        return False    
+def get_code_by_owner(db: Session, owner: str) -> Codes|bool:
+    code = db.query(Codes).filter(Codes.owner == owner).first()
+    if code:
+        return code
+    else:
+        return False
+def get_code_by_value(db: Session, value: str) -> Codes|bool:
+    code = db.query(Codes).filter(Codes.value == value).first()
+    if code:
+        return code
+    else:
+        return False
+
 #------------------- Keys -------------------
 def create_key(db: Session, key: KeyCreate) -> bool:
     new_key = Keys(**key.model_dump())
@@ -131,17 +155,25 @@ def create_key(db: Session, key: KeyCreate) -> bool:
         print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
-def get_keys_by_owner(db: Session, owner: str) -> Keys|bool:
+def get_keys_by_owner(db: Session, owner: str) -> list[Keys]|bool:
     return db.query(Keys).filter(Keys.owner == owner).all()
 def get_keys_by_value(db: Session, value: str) -> Keys|bool:
     return db.query(Keys).filter(Keys.value == value).first()
 def get_key(db: Session, key_id: int):
     return db.query(Keys).filter(Keys.id == key_id).first()
-def get_keys(db: Session):
+def get_keys(db: Session)-> list[Keys]:
     return db.query(Keys).all()
-def update_key(db: Session, key_id: int, key: KeyCreate):
+def update_key(db: Session, key_id: int, key: Key):
     try:
-        db.query(Keys).filter(Keys.id == key_id).update(key.model_dump())
+        db.query(Keys).filter(Keys.id == key_id).update({
+            Keys.id: key.id,
+            Keys.value: key.value,
+            Keys.valid_until: key.valid_until,
+            Keys.owner: key.owner,
+            Keys.registry: key.registry,
+            Keys.valid: key.valid,
+            Keys.metadata_: key.metadata
+        })
         db.commit()
         return get_key(db, key_id)
     except Exception as e:
@@ -226,7 +258,7 @@ def create_session(db: Session, session: SessionCreate) -> bool:
         print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()
         return False
-def get_sessions_by_owner(db: Session, owner: str) -> Sessions|bool:
+def get_sessions_by_owner(db: Session, owner: str) -> list[Sessions]|bool:
     session = db.query(Sessions).filter(Sessions.owner == owner)
     if session:
         return session
@@ -244,6 +276,22 @@ def delete_session(db: Session, value: str):
         db.delete(session)
         db.commit()
         return True
+    except Exception as e:
+        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        db.rollback()
+        return False
+def update_session(db: Session, value: str, session: Session) -> Sessions|bool:
+    try:
+        db.query(Sessions).filter(Sessions.value == value).update({
+            Sessions.owner: session.owner,
+            Sessions.registry: session.registry,
+            Sessions.valid_until: session.valid_until,
+            Sessions.valid: session.valid,
+            Sessions.metadata_: session.metadata_,
+            Sessions.value: session.value
+        })
+        db.commit()
+        return get_session_by_value(db, value)
     except Exception as e:
         print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
         db.rollback()

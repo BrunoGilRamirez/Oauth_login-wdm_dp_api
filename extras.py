@@ -3,11 +3,12 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Request
-from crud import *
+from models.crud import *
 from emailsender.sender import Sender
 from session_management import get_session
 from fastapi.security import OAuth2PasswordBearer
 from starlette.datastructures import MutableHeaders
+import secrets
 import os
 
 #------------------------------------- cryptography -------------------------------------
@@ -47,9 +48,25 @@ def check_if_still_on_valid_time(valid_until: str)->bool:
     else:
         return False
 def lockdown_user(db: Session, code: str, user: Users):
-    pass
-def generate_security_code(db: Session, user: Users):
-    pass# ya existe la tabla, solo genera el modelo y el crud.
+    #get all the keys of the user
+    keys = get_keys_by_owner(db, user.secret)
+    #get all the sessions of the user
+    sessions = get_sessions_by_owner(db, user.secret)
+    #update the valid field of all the keys and sessions to False
+    if isinstance(keys, list) and isinstance(sessions, list):
+        for key in keys:
+            key.valid=False
+            update_key(db, key.id, key)
+        for session in sessions:
+            session.valid=False
+            update_session(db, session.id, session)
+        return True#probar esta y la siguiente funcion
+def generate_security_code(db: Session, user: Users)->bool|int:
+    code = secrets.randbelow(10**8)  
+    if create_code(db, CodeCreate(owner=user.secret, value=code)):
+        return code
+    else:
+        return False
 
 #------------------------------------- User utilities -------------------------------------
 async def register_user(request: Request, session: Session = Depends(get_db)) -> bool|str:

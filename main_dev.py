@@ -2,7 +2,7 @@ import os
 #local imports
 from models.models import *
 from models.schemas import *
-from crud import *
+from models.crud import *
 from extras import *
 #fastapi imports
 from fastapi import Depends, FastAPI, HTTPException, status, Request

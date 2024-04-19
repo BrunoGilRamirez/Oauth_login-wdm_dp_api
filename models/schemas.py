@@ -45,6 +45,16 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+class CodeBase(BaseModel):
+    owner: str
+    value: str
+class CodeCreate(CodeBase):
+    pass
+class Code(CodeBase):
+
+    class Config:
+        from_attributes = True
+
 class KeyBase(BaseModel):
     value: str
     valid_until: str
