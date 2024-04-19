@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from models.models import *
-from schemas import *
+from models.schemas import *
 #------------------- Companies -------------------
 def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
     try:

@@ -1,4 +1,4 @@
-from schemas import *
+from models.schemas import *
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone

@@ -2,7 +2,7 @@ from flask import Flask, request, render_template, redirect, url_for, make_respo
 from flask_session import Session
 from session_management import get_session
 from models import *
-from schemas import *
+from models.schemas import *
 from crud import *
 from passlib.context import CryptContext
 session_root = get_session('.env')

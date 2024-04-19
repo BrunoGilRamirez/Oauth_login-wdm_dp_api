@@ -1,7 +1,7 @@
 import os
 #local imports
-from models import *
-from schemas import *
+from models.models import *
+from models.schemas import *
 from crud import *
 from extras import *
 #fastapi imports
