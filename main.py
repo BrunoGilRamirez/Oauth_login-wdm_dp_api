@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 
 #------------------------------------- init app -----------------------------------------
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
 temp = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv('SECRET_KEY_sessions'), https_only=True)
@@ -93,12 +93,12 @@ async def login(request: Request, db: Session = Depends(get_db)):
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:
             await send_email(db,owner=user.secret, 
-                       subject="New session", 
+                       subject="Nuevo inicio de sesión", 
                        template="new_session.html", 
-                       context={"username": user.secret, 
+                       context={"username": user.name, 
                                 "creation_date": datetime.now().strftime("%d/%m/%Y"), 
                                 "metadata": meta, 
-                                "link":f"{httpsdir}/lockdown/{user.secret}"
+                                "link":f"{httpsdir}/lockdown/{encode_secret(user.secret)}"
                                 }
                         )
             request.session['access_token'] = access_token 
@@ -124,7 +124,7 @@ async def home(request: Request, db: Session = Depends(get_db)):
             except:
                 pass
             return RedirectResponse(url="/UI/login")
-        return temp.TemplateResponse("user/home.html", {"request": request, "user": user})
+        return temp.TemplateResponse("user/home.html", {"request": request})
     else:
         return temp.TemplateResponse("auth/index.html", {"request": request})
     
@@ -162,6 +162,7 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
     if token:
         request_add_token(request, token)
         user = await get_current_user(request, db)
+        keys = get_keys_by_owner(db, user.secret)
         if request.method== "GET" and user:
             pass
         elif request.method == "POST" and user:
@@ -170,14 +171,13 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
             if request.headers.get('Delete'):
                 id=int(request.headers.get('Delete'))
                 if not delete_key(db, id):
-                    return temp.TemplateResponse("user/access_keys.html", {"request": request, "user": user, "error": "Key deletion failed"})
+                    return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys,"error": "Key deletion failed"})
         elif not user:
             return RedirectResponse(url="/UI/login")
-        keys = get_keys_by_owner(db, user.secret)
-        return temp.TemplateResponse("user/access_keys.html", {"request": request, "user": user, "keys": keys})
+        return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys})
     else:
         return temp.TemplateResponse("auth/index.html", {"request": request})
-@app.get("/UI/verify/{encoded}")
+@app.get("/UI/verify/{encoded}", include_in_schema=False)
 async def verify(encoded:str, db: Session = Depends(get_db)):
     print(encoded)
     user_secret=decode_varification(encoded)
@@ -189,6 +189,30 @@ async def verify(encoded:str, db: Session = Depends(get_db)):
             return {"message": "User not verified"}
     else:
         return {"message": "User not found"}
+@app.get("/lockdown/{encoded}", include_in_schema=False)
+@app.post("/lockdown/{encoded}", include_in_schema=False)
+async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db)):
+    '''When this endpoint is called, it sends a security code to the user's email.
+    If the request is a POST, it will reset the user's password and disable all the user's sessions and tokens if the security code is correct.'''
+    user_secret=decode_varification(encoded)
+    if user_secret:
+        user = get_user_by_secret(db, user_secret)
+        if not user:
+            return {"message": "User not found"}
+        if request.method == "GET":
+            code = generate_security_code(db, user)
+            await send_email(db,owner=user,subject="Lockdown Code",template="lockdown.html",context={"username": user.name, "code": code}) 
+            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "message": "Code sent to your email."})#aqui te quedaste
+        elif request.method == "POST":
+            form = await request.form()
+            code = form['code']
+            feedback = await lockdown_user(request, code, db)
+            if feedback:
+                return RedirectResponse(url="/UI/login", status_code=303)
+            else:
+                return temp.TemplateResponse("auth/change_pass.html", {"request": request, "error": "Lockdown failed"})
+
+
 
     
 #--------------------------- API --------------------------------
