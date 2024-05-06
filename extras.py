@@ -1,13 +1,14 @@
-from schemas import *
+from models.schemas import *
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Request
-from crud import *
+from models.crud import *
 from emailsender.sender import Sender
 from session_management import get_session
 from fastapi.security import OAuth2PasswordBearer
 from starlette.datastructures import MutableHeaders
+import secrets
 import os
 
 #------------------------------------- cryptography -------------------------------------
@@ -46,6 +47,24 @@ def check_if_still_on_valid_time(valid_until: str)->bool:
         return True
     else:
         return False
+def lockdown_user(db: Session, code: str, user: Users):
+    keys = get_keys_by_owner(db, user.secret)
+    sessions = get_sessions_by_owner(db, user.secret)
+    #update the valid field of all the keys and sessions to False
+    if isinstance(keys, list) and isinstance(sessions, list):
+        for key in keys:
+            key.valid=False
+            update_key(db, key.id, key)
+        for session in sessions:
+            session.valid=False
+            update_session(db, session.id, session)
+        return True#probar esta y la siguiente funcion
+def generate_security_code(db: Session, user: Users)->bool|int:
+    code = secrets.randbelow(10**8)  
+    if create_code(db, CodeCreate(owner=user.secret, value=code)):
+        return code
+    else:
+        return False
 
 #------------------------------------- User utilities -------------------------------------
 async def register_user(request: Request, session: Session = Depends(get_db)) -> bool|str:
@@ -63,7 +82,7 @@ async def register_user(request: Request, session: Session = Depends(get_db)) ->
     secret=generate_user_secret(username, role, email, employer, security_word)
     user = UserCreate(name=username, role=role, email=email, employer=employer_id, secret=secret, valid=False)
     sec_word=SecurityWordCreate(owner=secret, word=security_word)
-    encoded_secret = jwt.encode({"sub": secret}, secret_key_ps, algorithm=ALGORITHM)
+    encoded_secret = encode_secret(secret)
     if not user_exists(session, user):
         if messenger.send_template_email(recipient=email,
                                          subject="Welcome to Weidmüller Data Product API",
@@ -229,7 +248,7 @@ async def send_email(db:Session, owner: str|User|Users, subject: str, template: 
         email= owner.email
         name = owner.name
     context['username']=name
-    if isinstance(user, User):
+    if isinstance(owner, User) or isinstance(owner, Users):
         messenger.send_template_email(recipient=email,
                                         subject=subject,
                                         template=template,
@@ -242,3 +261,5 @@ def decode_varification(encoded:str) -> str|bool:
         return secret
     except:
         return False
+def encode_secret(secret: str) -> str:
+    return jwt.encode({"sub": secret}, secret_key_ps, algorithm=ALGORITHM)

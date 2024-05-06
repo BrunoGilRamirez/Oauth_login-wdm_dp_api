@@ -1,6 +1,5 @@
 from typing import List
 from pydantic import BaseModel
-from models import Companies
 from pydantic import BaseModel
 from typing import List    
 
@@ -42,6 +41,16 @@ class User(UserBase):
     keys: List['Key'] = []
     security_words: List['SecurityWord'] = []
     sessions: List['Session'] = []    
+
+    class Config:
+        from_attributes = True
+
+class CodeBase(BaseModel):
+    owner: str
+    value: str
+class CodeCreate(CodeBase):
+    pass
+class Code(CodeBase):
 
     class Config:
         from_attributes = True

@@ -1,0 +1,114 @@
+<!-- lockdown.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cambio de Contraseña</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #ef7800;
+    }
+
+    .container {
+        max-width: 400px;
+        margin: 0 auto;
+        background-color: #fff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .container input[type="submit"] {
+        background-color: #af744c;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }    
+
+    .container input[type="submit"]:hover{
+        background-color: #3ec94a;
+    }
+    .error-container {
+        display: none;
+        background-color: #ffcccc;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    .error-container.active {
+        display: block;
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cambio de Contraseña</h1>
+        <div class="info-container">
+            <p>Ingrese el código de seguridad que se envió a su correo electrónico para efectuar el cambio de contraseña.</p>
+        </div>
+        <form id="changePasswordForm" action="/UI/lockdown/{{ encoded }}" method="POST">
+            <div class="form-group">
+                <label for="currentPassword">Contraseña Actual</label>
+                <input type="password" id="currentPassword" name="currentPassword" required>
+            </div>
+            <div class="form-group">
+                <label for="newPassword">Nueva Contraseña</label>
+                <input type="password" id="newPassword" name="newPassword" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirmar Nueva Contraseña</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+            </div>
+            <div class="form-group">
+                <label for="code">Código de Seguridad</label>
+                <input type="text" id="code" name="code" required>
+            </div>
+            <input type="submit" value="Cambiar Contraseña">
+        </form>
+        <div class="error-container" id="errorContainer">
+            <p>Error: <span id="errorMessage"></span></p>
+            <button onclick="hideError()">Cerrar</button>
+        </div>
+        {% if error %}
+        <script>
+            function showError(message) {
+                document.getElementById('errorMessage').textContent = message;
+                document.getElementById('errorContainer').classList.add('active');
+            }
+
+            function hideError() {
+                document.getElementById('errorContainer').classList.remove('active');
+            }
+            
+            showError("{{ error }}");
+        </script>
+        {% endif %}
+    </div>
+</body>
+</html>
