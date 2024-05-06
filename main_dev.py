@@ -206,7 +206,7 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
         elif request.method == "POST":
             form = await request.form()
             code = form['code']
-            feedback = await lockdown_user(request, db)
+            feedback = await lockdown_user(request, code, db)
             if feedback:
                 return RedirectResponse(url="/UI/login", status_code=303)
             else:

@@ -48,9 +48,7 @@ def check_if_still_on_valid_time(valid_until: str)->bool:
     else:
         return False
 def lockdown_user(db: Session, code: str, user: Users):
-    #get all the keys of the user
     keys = get_keys_by_owner(db, user.secret)
-    #get all the sessions of the user
     sessions = get_sessions_by_owner(db, user.secret)
     #update the valid field of all the keys and sessions to False
     if isinstance(keys, list) and isinstance(sessions, list):

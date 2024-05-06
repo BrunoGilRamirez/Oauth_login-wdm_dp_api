@@ -87,7 +87,6 @@ def get_all_user_info(db: Session, user: UserCreate|None=None, secret: str|None=
     if user and employer:
         employer_schema = Company(id=employer.id,name=employer.name, phone_number=employer.phone_number, registry=str(employer.registry), email=employer.email)
         return User( id=user.id, name=user.name,role=user.role, email=user.email, employer=user.employer, secret=user.secret, companies=employer_schema, valid=user.valid)
-        
     else:
         return False
 
