@@ -7,3 +7,4 @@ schemas1.py
 /db
 .env.local
 .vscode/launch.json
+.vscode
