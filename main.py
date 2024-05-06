@@ -19,7 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 app = FastAPI(docs_url=None, redoc_url=None)
 temp = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.add_middleware(SessionMiddleware, secret_key=os.getenv('SECRET_KEY_sessions'), https_only=True)
+app.add_middleware(SessionMiddleware, secret_key=os.getenv('SECRET_KEY_sessions'), https_only=True, same_site="strict")
 
 #---------------------------Middleware--------------------------------
 @app.middleware("http")
@@ -38,14 +38,13 @@ async def favicon():
 #--------------------------- root --------------------------------
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db)):
-    if validate_token(request.session.get("access_token"),db):
-        return RedirectResponse(url="/UI/home")
-    else:
-        try:
+    token = request.session.get("access_token")
+    if token:
+        if validate_token(token,db):
+            return RedirectResponse(url="/UI/home")
+        else:
             request.session.pop("access_token")
-        except:
-            pass
-        return RedirectResponse(url="/UI/login")
+    return RedirectResponse(url="/UI/login", status_code=303) #303 is the code for "See Other" (since HTTP/1.1
 
 #--------------------------- UI --------------------------------
 @app.get("/UI/register", response_class=HTMLResponse)
@@ -115,18 +114,15 @@ async def home(request: Request, db: Session = Depends(get_db)):
     elif request.method == "POST":
         pass
     if token:
+        user = False
         request_add_token(request, token)
         user = await get_current_user(request, db)
-        if not user:
-            request.session.clear()
-            try:
-                request.form(None)
-            except:
-                pass
-            return RedirectResponse(url="/UI/login")
-        return temp.TemplateResponse("user/home.html", {"request": request})
-    else:
-        return temp.TemplateResponse("auth/index.html", {"request": request})
+        if user:
+            return temp.TemplateResponse("user/home.html", {"request": request})
+        else:
+            request.session.pop("access_token")
+    
+    return temp.TemplateResponse("auth/index.html", {"request": request})
     
 @app.get("/UI/logout", response_class=RedirectResponse)
 async def logout(request: Request, db: Session = Depends(get_db)):
@@ -162,21 +158,23 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
     if token:
         request_add_token(request, token)
         user = await get_current_user(request, db)
-        keys = get_keys_by_owner(db, user.secret)
-        if request.method== "GET" and user:
-            pass
-        elif request.method == "POST" and user:
-            if request.headers.get('Create')=="True":
-                token= await create_access_token(db, data={"sub": user.secret}, expires_delta=timedelta(days=5))
-            if request.headers.get('Delete'):
-                id=int(request.headers.get('Delete'))
-                if not delete_key(db, id):
-                    return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys,"error": "Key deletion failed"})
-        elif not user:
+        if isinstance(user, User):
+            keys = get_keys_by_owner(db, user.secret)
+            if request.method== "GET" and user:
+                pass
+            elif request.method == "POST" and user:
+                if request.headers.get('Create')=="True":
+                    token= await create_access_token(db, data={"sub": user.secret}, expires_delta=timedelta(days=5))
+                if request.headers.get('Delete'):
+                    id=int(request.headers.get('Delete'))
+                    if not delete_key(db, id):
+                        return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys,"error": "Key deletion failed"})
+            return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys})
+        else:
+            request.session.clear()
             return RedirectResponse(url="/UI/login")
-        return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys})
-    else:
-        return temp.TemplateResponse("auth/index.html", {"request": request})
+        
+    return RedirectResponse(url="/UI/login")
 @app.get("/UI/verify/{encoded}", include_in_schema=False)
 async def verify(encoded:str, db: Session = Depends(get_db)):
     print(encoded)
