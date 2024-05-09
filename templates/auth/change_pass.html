@@ -72,7 +72,7 @@
         <div class="info-container">
             <p>Ingrese el código de seguridad que se envió a su correo electrónico para efectuar el cambio de contraseña.</p>
         </div>
-        <form id="changePasswordForm" action="/UI/lockdown/{{ encoded }}" method="POST">
+        <form id="changePasswordForm" action="/lockdown/{{ encoded }}" method="POST">
             <div class="form-group">
                 <label for="currentPassword">Contraseña Actual</label>
                 <input type="password" id="currentPassword" name="currentPassword" required>

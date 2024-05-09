@@ -9,6 +9,7 @@ from session_management import get_session
 from fastapi.security import OAuth2PasswordBearer
 from starlette.datastructures import MutableHeaders
 import secrets
+import traceback
 import os
 
 #------------------------------------- cryptography -------------------------------------
@@ -47,21 +48,27 @@ def check_if_still_on_valid_time(valid_until: str)->bool:
         return True
     else:
         return False
-def lockdown_user(db: Session, code: str, user: Users):
-    keys = get_keys_by_owner(db, user.secret)
-    sessions = get_sessions_by_owner(db, user.secret)
-    #update the valid field of all the keys and sessions to False
-    if isinstance(keys, list) and isinstance(sessions, list):
-        for key in keys:
-            key.valid=False
-            update_key(db, key.id, key)
-        for session in sessions:
-            session.valid=False
-            update_session(db, session.id, session)
-        return True#probar esta y la siguiente funcion
+def lockdown_user(db: Session, code: str, current_password: str, new_password: str)->str|bool:
+    code = get_code_by_value(db, code)
+    still_valid=check_if_still_on_valid_time(code.valid_until)
+    if isinstance(code, Codes) and still_valid:
+        secret = code.owner
+        keys = get_keys_by_owner(db, secret)
+        sessions = get_sessions_by_owner(db, secret)
+        print(f"Keys: {keys}")
+        print(f"Sessions: {sessions}")
+        if verify_password(current_password, get_password_by_owner(db, secret).value):
+            #update the valid field of all the keys and sessions to False
+            if isinstance(keys, list) and isinstance(sessions, list):
+                if update_valid_list_of_sessions(db, sessions) and update_valid_list_of_keys(db, keys) and delete_code(db, code):
+                    if update_password(db, secret,get_password_hash(new_password)):
+                        return True
+    return False
 def generate_security_code(db: Session, user: Users)->bool|int:
-    code = secrets.randbelow(10**8)  
-    if create_code(db, CodeCreate(owner=user.secret, value=code)):
+    code = str(secrets.randbelow(10**8)) 
+    time=datetime.now() + timedelta(minutes=5) 
+    time=time.strftime('%Y-%m-%d %H:%M:%S')
+    if create_code(db, CodeCreate(owner=user.secret, value=code,valid_until=time)):
         return code
     else:
         return False
@@ -122,6 +129,7 @@ async def get_current_user_API(token: str = Depends(oauth2_scheme), session: Ses
                 if isinstance(user, User):
                     return True #the user is authenticated
     except:
+        traceback.print_exc()
         raise credentials_exception
     
 
@@ -148,7 +156,8 @@ def decode_and_verify(secret: str, db: Session):
     try:
         user= get_all_user_info(db, secret=secret)
         return user
-    except JWTError:
+    except Exception as e:
+        traceback.print_exc()
         return False
 def encrypt_data(data: dict, expires_delta: timedelta):
     expire = datetime.now(timezone.utc) + expires_delta
@@ -238,8 +247,9 @@ def validate_token_or_session(token: str, session: Session) -> bool|Keys:
     if key and key.valid and check_if_still_on_valid_time(key.valid_until):
         return decode_and_verify(key.owner, session)
 #------------------------------------- async mail sender -------------------------------------
-async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None):
-
+async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None)->bool:
+    email = None
+    name = None
     if isinstance(owner, str):
         user = get_all_user_info(db=db, secret=owner)
         email= user.email
@@ -248,12 +258,16 @@ async def send_email(db:Session, owner: str|User|Users, subject: str, template: 
         email= owner.email
         name = owner.name
     context['username']=name
-    if isinstance(owner, User) or isinstance(owner, Users):
+    print(f"Sending email to {email}")
+    if email is not None and name is not None:
         messenger.send_template_email(recipient=email,
                                         subject=subject,
                                         template=template,
                                         context=context
                                         )
+        return True
+    else:
+        return False
 def decode_varification(encoded:str) -> str|bool:
     try:
         payload = jwt.decode(encoded, secret_key_ps, algorithms=[ALGORITHM])

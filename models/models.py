@@ -60,6 +60,11 @@ class SecurityWords(origin_models.securitywords):
     
 
 class Sessions(origin_models.sessions):
-    pass
+    def __repr__(self):
+        return f'Session(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until}, valid={self.valid})'
+    def __str__(self):
+        return f'Session(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until}, valid={self.valid})'
+    def to_dict(self):
+        return {'id': self.id, 'owner': self.owner, 'value': self.value, 'registry': self.registry, 'valid_until': self.valid_until, 'valid': self.valid}
 
 

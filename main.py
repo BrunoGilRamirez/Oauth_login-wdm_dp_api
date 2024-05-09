@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse,HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 #starlette imports
+import traceback
 from starlette.middleware.sessions import SessionMiddleware
 
 
@@ -91,15 +92,17 @@ async def login(request: Request, db: Session = Depends(get_db)):
         if not flag:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
         else:
-            await send_email(db,owner=user.secret, 
+            email_sended=await send_email(db,owner=user.secret, 
                        subject="Nuevo inicio de sesión", 
                        template="new_session.html", 
                        context={"username": user.name, 
                                 "creation_date": datetime.now().strftime("%d/%m/%Y"), 
                                 "metadata": meta, 
-                                "link":f"{httpsdir}/lockdown/{encode_secret(user.secret)}"
+                                "link":f"{request.base_url}lockdown/{encode_secret(user.secret)}"
                                 }
                         )
+            if not email_sended:
+                print("Email not sent")
             request.session['access_token'] = access_token 
             redirect = RedirectResponse(url="/UI/home", status_code=status.HTTP_302_FOUND)
         
@@ -145,8 +148,8 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
             request.session.clear()
             try:
                 request.form(None)
-            except:
-                pass
+            except Exception as e:
+                traceback.print_exc()
             return RedirectResponse(url="/UI/login")
         return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user})
     else:
@@ -200,15 +203,17 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
         if request.method == "GET":
             code = generate_security_code(db, user)
             await send_email(db,owner=user,subject="Lockdown Code",template="lockdown.html",context={"username": user.name, "code": code}) 
-            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "message": "Code sent to your email."})#aqui te quedaste
+            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "message": "Code sent to your email.", "encoded": encoded})#aqui te quedaste
         elif request.method == "POST":
             form = await request.form()
             code = form['code']
-            feedback = await lockdown_user(request, code, db)
+            current_pass = form['currentPassword']
+            new_pass = form['newPassword']
+            feedback = lockdown_user(db, code, current_pass, new_pass)
             if feedback:
                 return RedirectResponse(url="/UI/login", status_code=303)
             else:
-                return temp.TemplateResponse("auth/change_pass.html", {"request": request, "error": "Lockdown failed"})
+                return temp.TemplateResponse("auth/change_pass.html", {"request": request, "error": "Lockdown failed, Your password was not correct or the code was not correct.", "encoded": encoded})
 
 
 

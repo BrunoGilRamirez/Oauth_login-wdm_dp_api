@@ -48,10 +48,11 @@ class User(UserBase):
 class CodeBase(BaseModel):
     owner: str
     value: str
+    valid_until: str
 class CodeCreate(CodeBase):
     pass
 class Code(CodeBase):
-
+    id: int
     class Config:
         from_attributes = True
 

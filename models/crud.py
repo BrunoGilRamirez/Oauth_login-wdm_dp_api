@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models.models import *
 from models.schemas import *
+import traceback
 #------------------- Companies -------------------
 def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
     try:
@@ -9,7 +10,7 @@ def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
         db.commit()
         return new_company
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def get_company(db: Session, company_id: int):
@@ -28,7 +29,7 @@ def update_company(db: Session, company_id: int, company: CompanyCreate) -> Comp
         db.commit()
         return get_company(db, company_id)
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def delete_company(db: Session, company_id: int) -> bool:
@@ -38,7 +39,7 @@ def delete_company(db: Session, company_id: int) -> bool:
         db.commit()
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def user_exists(db: Session, user: UserCreate) -> bool:
@@ -56,7 +57,7 @@ def create_user(db: Session, user: UserCreate) -> bool:
         #db.refresh(new_user)
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def get_user_by_user(db: Session, user: UserCreate) -> Users|bool:
@@ -104,7 +105,7 @@ def update_user(db: Session, user_id: int, user: User) -> Users|bool:
         db.commit()
         return get_user_by_email(db, user.email)
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def delete_user(db: Session, user_id: int):
@@ -114,7 +115,7 @@ def delete_user(db: Session, user_id: int):
         db.commit()
         return user
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 
@@ -126,7 +127,7 @@ def create_code(db: Session, code: CodeCreate) -> bool:
         db.commit()
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False    
 def get_code_by_owner(db: Session, owner: str) -> Codes|bool:
@@ -141,7 +142,15 @@ def get_code_by_value(db: Session, value: str) -> Codes|bool:
         return code
     else:
         return False
-
+def delete_code(db: Session, code:Codes) -> bool:
+    try:
+        db.delete(code)
+        db.commit()
+        return True
+    except Exception as e:
+        traceback.print_exc()
+        db.rollback()
+        return False
 #------------------- Keys -------------------
 def create_key(db: Session, key: KeyCreate) -> bool:
     new_key = Keys(**key.model_dump())
@@ -151,7 +160,7 @@ def create_key(db: Session, key: KeyCreate) -> bool:
         #db.refresh(new_key)
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def get_keys_by_owner(db: Session, owner: str) -> list[Keys]|bool:
@@ -165,20 +174,28 @@ def get_keys(db: Session)-> list[Keys]:
 def update_key(db: Session, key_id: int, key: Key):
     try:
         db.query(Keys).filter(Keys.id == key_id).update({
-            Keys.id: key.id,
-            Keys.value: key.value,
-            Keys.valid_until: key.valid_until,
-            Keys.owner: key.owner,
-            Keys.registry: key.registry,
             Keys.valid: key.valid,
-            Keys.metadata_: key.metadata
         })
         db.commit()
-        return get_key(db, key_id)
+        return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
+    
+def update_valid_list_of_keys(db: Session, keys: list[Key]) -> bool:
+    try:
+        for key in keys:
+            db.query(Keys).filter(Keys.value == key.value).update({
+                Keys.valid: False
+            })
+        db.commit()
+        return True
+    except Exception as e:
+        traceback.print_exc()
+        db.rollback()
+        return False
+
 def delete_key(db: Session, key_id: int):
     key = get_key(db, key_id)
     try:
@@ -186,7 +203,7 @@ def delete_key(db: Session, key_id: int):
         db.commit()
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 
@@ -198,16 +215,16 @@ def create_password(db: Session, password: PasswordCreate) -> bool:
         db.commit()
         return True if get_password_by_owner(db, password.owner) else False
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
-def update_password(db: Session, password_id: int, password: PasswordCreate):
+def update_password(db: Session, owner: str, new:str ) -> bool:
     try:
-        db.query(Passwords).filter(Passwords.id == password_id).update(password.model_dump())
+        db.query(Passwords).filter(Passwords.owner == owner).update({Passwords.value: new})
         db.commit()
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def get_password_by_owner(db: Session, owner: str) -> Passwords|bool:
@@ -243,7 +260,7 @@ def update_security_word(db: Session, owner: str, security_word: SecurityWordCre
         db.commit()
         return get_security_word_by_owner(db, owner)
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 #------------------- Sessions -------------------
@@ -254,14 +271,14 @@ def create_session(db: Session, session: SessionCreate) -> bool:
         db.commit()
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def get_sessions_by_owner(db: Session, owner: str) -> list[Sessions]|bool:
-    session = db.query(Sessions).filter(Sessions.owner == owner)
-    if session:
-        return session
-    else:
+    try:
+        return db.query(Sessions).filter(Sessions.owner == owner).all()
+    except Exception as e:
+        traceback.print_exc()
         return False
 def get_session_by_value(db: Session, value: str) -> Sessions|bool:
     session = db.query(Sessions).filter(Sessions.value == value).first()
@@ -276,23 +293,30 @@ def delete_session(db: Session, value: str):
         db.commit()
         return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
         db.rollback()
         return False
 def update_session(db: Session, value: str, session: Session) -> Sessions|bool:
     try:
         db.query(Sessions).filter(Sessions.value == value).update({
-            Sessions.owner: session.owner,
-            Sessions.registry: session.registry,
-            Sessions.valid_until: session.valid_until,
             Sessions.valid: session.valid,
-            Sessions.metadata_: session.metadata_,
-            Sessions.value: session.value
         })
         db.commit()
-        return get_session_by_value(db, value)
+        return True
     except Exception as e:
-        print(f"\n\n\n\n\nerror: {e}\n\n\n\n\n")
+        traceback.print_exc()
+        db.rollback()
+        return False
+def update_valid_list_of_sessions(db: Session, sessions: list[Session]) -> bool:
+    try:
+        for session in sessions:
+            db.query(Sessions).filter(Sessions.value == session.value).update({
+                Sessions.valid: False
+            })
+        db.commit()
+        return True
+    except Exception as e:
+        traceback.print_exc()
         db.rollback()
         return False
     

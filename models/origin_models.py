@@ -1,11 +1,11 @@
 from typing import List
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
 
 Base = declarative_base()
-
+metadata = Base.metadata
 
 class companies(Base):
     __tablename__ = 'companies'
@@ -58,22 +58,27 @@ class users(Base):
     valid = mapped_column(Boolean, nullable=False)
 
     companies: Mapped['companies'] = relationship('Companies', back_populates='users')
+    codes: Mapped[List['codes']] = relationship('Codes', uselist=True, back_populates='users')
     keys: Mapped[List['keys']] = relationship('Keys', uselist=True, back_populates='users')
     passwords: Mapped['passwords'] = relationship('Passwords', uselist=False, back_populates='users')
     security_words: Mapped[List['securitywords']] = relationship('SecurityWords', uselist=True, back_populates='users')
     sessions: Mapped[List['sessions']] = relationship('Sessions', uselist=True, back_populates='users')
 
 
-class codes(users):
+class codes(Base):
     __tablename__ = 'codes'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fk'),
-        PrimaryKeyConstraint('owner', name='codes_pkey'),
+        PrimaryKeyConstraint('id', name='codes_pkey'),
         {'schema': 'private'}
     )
 
-    owner = mapped_column(Text)
     value = mapped_column(Text, nullable=False)
+    owner = mapped_column(Text, nullable=False)
+    id = mapped_column(BigInteger)
+    valid_until = mapped_column(DateTime, nullable=False)
+
+    users: Mapped['users'] = relationship('Users', back_populates='codes')
 
 
 class keys(Base):
