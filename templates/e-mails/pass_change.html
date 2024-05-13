@@ -1,0 +1,75 @@
+<!-- new_token.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Seguridad: Cierre de sesiones y cambio de contraseña">
+<title>Nuevo Token</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #ef7800;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #333;
+        color: #fff;
+        margin-top: -20px;
+        margin-left: -20px;
+        margin-right: -20px;
+        padding: 20px 10px;
+    }
+
+    .logo {
+        width: 100px;
+    }
+
+    .navigation {
+        display: flex;
+        gap: 20px;
+    }
+
+    .navigation a {
+        text-decoration: none;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 4px;
+        background-color: #555;
+    }
+
+    .navigation a:hover {
+        background-color: #777;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .token-message {
+        background-color: #fff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        padding: 20px;
+    }
+</style>
+</head>
+<body>
+    <div class="header">
+        <img class="logo" src="http://drive.google.com/uc?export=view&id=1l800sZ6LvlUY_zG7_Fq3BU8Z14pxtvfh" alt="Logo">
+    </div>
+    <h1>Nuevo Token</h1>
+    <h2>Que gusto saludarte, {{ username }}</h2>
+    <div class="token-message">
+        <p>Se ha generado un nuevo Código para que pueda cambiar tu contraseña</p>
+        <p><strong>{{ code }}</strong></p>
+    </div>
+</body>
+</html>
+
