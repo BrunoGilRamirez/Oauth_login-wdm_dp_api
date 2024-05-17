@@ -64,11 +64,18 @@ def lockdown_user(db: Session, code: str, current_password: str, new_password: s
                     if update_password(db, secret,get_password_hash(new_password)):
                         return True
     return False
-def generate_security_code(db: Session, user: Users)->bool|int:
-    code = str(secrets.randbelow(10**8)) 
-    time=datetime.now() + timedelta(minutes=5) 
-    time=time.strftime('%Y-%m-%d %H:%M:%S')
-    if create_code(db, CodeCreate(owner=user.secret, value=code,valid_until=time)):
+def generate_security_code(db: Session, user: str, operation:int, return_time: bool=False)->bool|int|tuple[int,datetime]:
+    '''Generates a random code and stores it in the database with the user as the owner. The code is valid for 5 minutes.
+    Returns the code if successful, otherwise returns False.
+    - db: the database session
+    - user: the user's secret
+    - operation: the operation to be performed with the code. 1 for password reset, 2 for user verification.
+    - return_time: if True, returns the code and the time it is valid until. Otherwise, returns only the code.'''
+    code = str(secrets.randbelow(10**8)) #generate a random 8-digit code
+    time=datetime.now() + timedelta(minutes=5, seconds=1) 
+    time_set=time.strftime('%Y-%m-%d %H:%M:%S')
+    if create_code(db, CodeCreate(owner=user, value=code,valid_until=time_set, operation=operation)):
+        if return_time: return code, time
         return code
     else:
         return False
@@ -96,7 +103,7 @@ async def register_user(request: Request, session: Session = Depends(get_db)) ->
                                          template="welcome.html",
                                          context={"username": username, 
                                                   "creation_date": datetime.now().strftime("%d/%m/%Y"),
-                                                  "verification_link": f"{httpsdir}/UI/verify/{encoded_secret}"
+                                                  "verification_link": f"{request.base_url}UI/verify/{encoded_secret}"
                                                  }
                                         ):
             if create_user(session, user) and create_password(session, PasswordCreate(value=password, owner=user.secret)) and create_security_word(session, sec_word):
@@ -131,7 +138,24 @@ async def get_current_user_API(token: str = Depends(oauth2_scheme), session: Ses
     except:
         traceback.print_exc()
         raise credentials_exception
-    
+
+async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db))->str:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token does not exist or is no longer valid",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        sess = get_session_by_value(session, token)
+        if isinstance(sess,Sessions):
+            if check_if_still_on_valid_time(sess.valid_until):
+                user = decode_and_verify(sess.owner, session)
+                print(type(user))
+                if isinstance(user, User):
+                    return user
+    except:
+        traceback.print_exc()    
+    raise credentials_exception
 
 async def get_current_user(request: Request, session: Session = Depends(get_db)):
     
@@ -258,8 +282,8 @@ async def send_email(db:Session, owner: str|User|Users, subject: str, template: 
         email= owner.email
         name = owner.name
     context['username']=name
-    print(f"Sending email to {email}")
     if email is not None and name is not None:
+        print(f"Sending email to {email}")
         messenger.send_template_email(recipient=email,
                                         subject=subject,
                                         template=template,

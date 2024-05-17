@@ -20,7 +20,10 @@
         align-items: center;
         background-color: #333;
         color: #fff;
-        padding: 10px 20px;
+        margin-top: -20px;
+        margin-left: -20px;
+        margin-right: -20px;
+        padding: 20px 10px;
     }
 
     .logo {
@@ -62,11 +65,11 @@
         <img class="logo" src="http://drive.google.com/uc?export=view&id=1l800sZ6LvlUY_zG7_Fq3BU8Z14pxtvfh" alt="Logo">
     </div>
     <h1>Nueva Sesión</h1>
-    <h2>Que gusto saludarte, {{ username }}</h2>
+    <h2>Que gusto saludarle, {{ username }}.</h2>
     <div class="session-message">
-        <p>Se ha iniciado una nueva sesión en tu cuenta. A continuación, encontrarás los detalles de la sesión:</p>
+        <p>Se ha iniciado una nueva sesión en su cuenta. A continuación, encontrará los detalles de la sesión:</p>
         <p><strong>{{ metadata }}</strong></p>
-        <p>Si no has iniciado esta sesión, te recomendamos hacer un bloqueo de todas las sesiones y tokens haciendo click <a href="{{link}}">aquí</a> para tomar medidas de contención.</p>
+        <p>Si no ha iniciado esta sesión, le recomendamos hacer un bloqueo de todas las sesiones y tokens haciendo click <a href="{{link}}">aquí</a> para tomar medidas de contención.</p>
         <p></p>
     </div>
 </body>

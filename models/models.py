@@ -36,11 +36,11 @@ class Users(origin_models.users):
 class Codes(origin_models.codes):
     #------------------------------------- methods -------------------------------------
     def __repr__(self):
-        return f'Code(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until}, valid={self.valid})'
+        return f'Code(id={self.id}, owner={self.owner}, value={self.value},  valid_until={self.valid_until})'
     def __str__(self):
-        return f'Code(id={self.id}, owner={self.owner}, value={self.value}, registry={self.registry}, valid_until={self.valid_until}, valid={self.valid})'
+        return f'Code(id={self.id}, owner={self.owner}, value={self.value},  valid_until={self.valid_until})'
     def to_dict(self):
-        return {'id': self.id, 'owner': self.owner, 'value': self.value, 'registry': self.registry, 'valid_until': self.valid_until, 'valid': self.valid}
+        return {'id': self.id, 'owner': self.owner, 'value': self.value,  'valid_until': self.valid_until}
 
 class Keys(origin_models.keys):
     #------------------------------------- methods -------------------------------------

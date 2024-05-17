@@ -19,7 +19,10 @@
         align-items: center;
         background-color: #333;
         color: #fff;
-        padding: 10px 20px;
+        margin-top: -20px;
+        margin-left: -20px;
+        margin-right: -20px;
+        padding: 20px 10px;
     }
 
     .logo {
@@ -62,9 +65,9 @@
     </div>
     <h1>Bienvenido, {{ username }}</h1>
     <div class="welcome-message">
-        <p>Te damos la bienvenida a nuestro sitio. Tu cuenta ha sido creada el {{ creation_date }}.</p>
-        <p>¡Esperamos que disfrutes de tu experiencia!</p>
-        <p>Pero antes de empezar, por favor verifica tu dirección de correo electrónico.</p>
+        <p>Le damos la bienvenida a nuestro sitio. Su cuenta ha sido creada el {{ creation_date }}.</p>
+        <p>¡Esperamos que disfrute de la experiencia!</p>
+        <p>Pero antes de empezar, por favor verifique su dirección de correo electrónico.</p>
         <a href="{{ verification_link }}">Verificar mi dirección de correo electrónico</a>
     </div>
 </body>

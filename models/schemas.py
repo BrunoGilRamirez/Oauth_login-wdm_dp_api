@@ -49,6 +49,7 @@ class CodeBase(BaseModel):
     owner: str
     value: str
     valid_until: str
+    operation: int
 class CodeCreate(CodeBase):
     pass
 class Code(CodeBase):

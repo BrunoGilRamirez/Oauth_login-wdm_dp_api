@@ -136,6 +136,12 @@ def get_code_by_owner(db: Session, owner: str) -> Codes|bool:
         return code
     else:
         return False
+def get_code_by_owner_operation(db: Session, owner: str, operation: int) -> Codes|bool:
+    code = db.query(Codes).filter(Codes.owner == owner, Codes.operation == operation).first()
+    if code:
+        return code
+    else:
+        return False
 def get_code_by_value(db: Session, value: str) -> Codes|bool:
     code = db.query(Codes).filter(Codes.value == value).first()
     if code:

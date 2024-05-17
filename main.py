@@ -133,6 +133,7 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     request.session.clear()
     response = RedirectResponse(url="/")
     return response
+
 @app.get("/UI/user_settings", response_class=HTMLResponse)
 @app.post("/UI/user_settings", response_class=HTMLResponse)
 async def user_settings(request: Request, db: Session = Depends(get_db)):
@@ -151,9 +152,12 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
             except Exception as e:
                 traceback.print_exc()
             return RedirectResponse(url="/UI/login")
-        return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user})
+        #hide part of the mail of the user showing only the first 3 letters and the domain
+        email=user.email[:5]+"..."+user.email[user.email.find("@"):]
+        return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user, 'token': token, 'email': email})
     else:
-        return temp.TemplateResponse("auth/index.html", {"request": request})
+        return RedirectResponse(url="/UI/login")
+    
 @app.get("/UI/access_keys", response_class=HTMLResponse)
 @app.post("/UI/access_keys", response_class=HTMLResponse)
 async def access_keys(request: Request, db: Session = Depends(get_db)):
@@ -171,13 +175,13 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
                 if request.headers.get('Delete'):
                     id=int(request.headers.get('Delete'))
                     if not delete_key(db, id):
-                        return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys,"error": "Key deletion failed"})
-            return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys})
+                        return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys,"error": "Key deletion failed", 'token': token})
+            return temp.TemplateResponse("user/access_keys.html", {"request": request, "keys": keys, 'token': token})
         else:
             request.session.clear()
             return RedirectResponse(url="/UI/login")
-        
     return RedirectResponse(url="/UI/login")
+
 @app.get("/UI/verify/{encoded}", include_in_schema=False)
 async def verify(encoded:str, db: Session = Depends(get_db)):
     print(encoded)
@@ -190,6 +194,31 @@ async def verify(encoded:str, db: Session = Depends(get_db)):
             return {"message": "User not verified"}
     else:
         return {"message": "User not found"}
+
+@app.get("/UI/code-pass")
+async def code_pass(user: User = Depends(get_user_secret_Oa2), db: Session = Depends(get_db)):
+    if isinstance(user, User):
+        code = get_code_by_owner_operation(db,user.secret,2)
+        if isinstance(code, Codes):
+            if  check_if_still_on_valid_time(code.valid_until) is False:
+                if delete_code(db, code):
+                    code,time = generate_security_code(db=db, user=user.secret, operation=2,return_time=True)
+                    #if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                    if True:
+                        timeleft = time - datetime.now()
+                        return {"Expires": timeleft}
+            elif code.value is not None:
+                #transform valid_until string to datetime to calculate the time left
+                timeleft = code.valid_until - datetime.now()
+                return {"Expires": timeleft}
+        elif code is False:
+            code,time = generate_security_code(db=db, user=user.secret, operation=2,return_time=True)
+            #if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+            if True:
+                timeleft = time - datetime.now()
+                return {"Expires": timeleft}
+
+
 @app.get("/lockdown/{encoded}", include_in_schema=False)
 @app.post("/lockdown/{encoded}", include_in_schema=False)
 async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db)):
@@ -214,9 +243,6 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
                 return RedirectResponse(url="/UI/login", status_code=303)
             else:
                 return temp.TemplateResponse("auth/change_pass.html", {"request": request, "error": "Lockdown failed, Your password was not correct or the code was not correct.", "encoded": encoded})
-
-
-
     
 #--------------------------- API --------------------------------
 @app.post("/key")
@@ -232,9 +258,3 @@ async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(),
     access_token = await create_access_token(session,data={"sub": user.secret}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
 
-@app.get("/token_is_valid")
-async def token_is_valid(flag: bool = Depends(get_current_user_API)):
-    if flag:
-        return {"valid": True}
-    else:
-        return {"valid": False}

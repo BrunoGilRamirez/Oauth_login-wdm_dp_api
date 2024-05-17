@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Table, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, SmallInteger,Index, Integer, Numeric, PrimaryKeyConstraint, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
 
@@ -77,6 +77,7 @@ class codes(Base):
     owner = mapped_column(Text, nullable=False)
     id = mapped_column(BigInteger)
     valid_until = mapped_column(DateTime, nullable=False)
+    operation = mapped_column(SmallInteger, nullable=False)
 
     users: Mapped['users'] = relationship('Users', back_populates='codes')
 
