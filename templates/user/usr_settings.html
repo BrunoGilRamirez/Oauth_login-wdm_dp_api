@@ -5,139 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Information</title>
     <link rel="stylesheet" href="/static/css/styles.css">
-    <link rel="stylesheet" href="/static/css/user.css">
-    <style>
-        .verif-code-container {
-            display: none;
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        .verif-code-container.active {
-            display: block;
-        }
-
-        .verif-code-container input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-
-        .verif-code-container input[type="submit"] {
-            background-color: #a4a2a2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .verif-code-container input[type="submit"]:hover {
-            background-color: #cccccc;
-        }
-        .feedback,
-        .error-mess-pass {
-            display: none;
-            color: black;
-            align-self: center;
-            margin-top: -10px;
-        }
-        .check-aceptar {
-            display: none;
-            }
-        .check-aceptar label {
-            padding-left: 15px;
-            text-indent: -15px;
-            }
-        .check-aceptar input {
-            width: 13px;
-            height: 13px;
-            padding: 0;
-            margin:0;
-            vertical-align: bottom;
-            position: relative;
-            top: -1px;
-            }
-        .resend-code-btn {
-            background-color: #a4a2a2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            padding: 10px;
-            margin-top: 10px;
-        }
-        .score-bar {
-            display: none;
-            width: 100%;
-            margin-left: 10px;
-            margin-right: 10px;
-            height: 20px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .bar-segment {
-            flex-grow: 1;
-            height: 100%;
-            text-align: center;
-            transition: background-color 0.3s ease;
-        }
-
-        .bar-length {
-            background-color: #ccc;
-        }
-
-        .bar-digits {
-            background-color: #ccc;
-        }
-
-        .bar-lower {
-            background-color: #ccc;
-        }
-
-        .bar-upper {
-            background-color: #ccc;
-        }
-
-        .bar-non-words {
-            background-color: #ccc;
-        }
-
-        .bar-special-characters {
-            background-color: #ccc;
-        }
-        .Quality {
-            display: none;
-            color: black;
-            align-self: center;
-            margin-top: -10px;
-        }
-        .pass-rules {
-            display: none;
-            color: black;
-            align-self: center;
-            margin-top: -10px;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/pass_reset.css">
 </head>
-<body>
-    <div class="header">
-        <img class="logo" src="/static/weidmueller_logo.svg" alt="Logo">
-        <div class="navigation">
-            <a href="/UI/home">Inicio</a>
-            <a href="/UI/access_keys">Claves de acceso</a>
-            <a href="/UI/user_settings">Configuración de la cuenta</a>
-            <a href="/UI/logout">Cerrar Sesión</a>
-        </div>
-    </div>
+<body onload="header_animation()">
+    {% include 'header/weid_header.html' %}
     <h1>User Information</h1>
     <div class="table-container">
         <table>
@@ -156,47 +27,14 @@
                 <td>{{ user.companies.phone_number }}</td>
             </tr>
         </table>
-        <button class="change-password-btn" onclick="togglePasswordChange()">Cambiar Contraseña</button>
+        <button type="button" class="change-password-btn" onclick="togglePasswordChange()">Cambiar Contraseña</button>
     </div>
-    <div class="verif-code-container" id="passwordChangeContainer">
-        <form action="/UI/user_settings" method="POST">
-            <label for="currentPassword">Contraseña Actual:</label>
-            <input type="password" id="currentPassword" name="currentPassword" oninput="checkMatch()" required><br><br>
-            <label for="newPassword">Nueva Contraseña:</label>
-            <input type="password" id="newPassword" name="newPassword" oninput="checkMatch()" required>
-            
-            <div class="pass-rules" id="rules">
-                <li>A: La contraseña debe tener al menos un número.</li>
-                <li>B: La contraseña debe tener al menos una letra minúscula.</li>
-                <li>C: La contraseña debe tener al menos una letra mayúscula.</li>
-                <li>D: La contraseña debe tener al menos un carácter especial.</li>
-                <li>E: La contraseña no puede ser una palabra común.</li>
-            </div>
-            <div class="score-bar" id="bar">
-                <div class="bar-segment bar-digits"> A </div>
-                <div class="bar-segment bar-lower"> B </div>
-                <div class="bar-segment bar-upper">C</div>
-                <div class="bar-segment bar-special-characters"> D </div>
-                <div class="bar-segment bar-non-words"> E </div>
-            </div>
-            <p class="Quality" id="Quality"></p>
-            <label for="confirmPassword">Confirmar Contraseña:</label>
-            <input type="password" id="confirmPassword" name="confirmPassword" oninput="checkMatch()" required>
-            <p class="error-mess-pass" id="message"></p>
-            <div class="check-aceptar" id="check-aceptar">
-                <label>Aceptar Cambios  <input type="checkbox" id="check" name="check" onchange="triggerCodeVerification('{{token}}')"></label><br><br>
-            </div>
-            <div class="verif-code-container" id="verifCode">
-                <label for="verificationCode">Código de Verificación:</label>
-                <input type="text" id="verificationCode" name="verificationCode" oninput="checkVer()" required><br><br>
-                <p class="feedback" id="feedback"></p>
-                <button class="resend-code-btn" type="button">Reenviar Código</button><br><br>
-                <input type="submit" value="Guardar Cambios" id="submit">
-            </div>
-        </form>
-    </div>
+    {%if message%}
+        <p class="error-message">{{ message }}</p>
+    {%endif%}
+    {% include 'pass/password_block.html' %}
 
-    <script src="/static/js/common.js">
-    </script>
+    <script src="/static/js/pass_rules.js"> </script>
+    <script src="/static/js/header.js"></script>
 </body>
 </html>

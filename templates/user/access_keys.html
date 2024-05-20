@@ -7,16 +7,8 @@
 <link rel="stylesheet" href="/static/css/styles.css">
 <link rel="stylesheet" href="/static/css/user.css">
 </head>
-<body>
-    <div class="header">
-        <img class="logo" src="/static/weidmueller_logo.svg" alt="Logo">
-        <div class="navigation">
-            <a href="/UI/home">Inicio</a>
-            <a href="/UI/access_keys">Claves de acceso</a>
-            <a href="/UI/user_settings">Configuración de la cuenta</a>
-            <a href="/UI/logout">Cerrar Sesión</a>
-        </div>
-    </div>
+<body onload="header_animation()">
+    {% include 'header/weid_header.html' %}
     <h1>Claves de Acceso</h1>
     <div class="table-container">
         <table>
@@ -47,7 +39,7 @@
         <span>Copiado al portapapeles</span>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     <script src="/static/js/common.js"></script>
+    <script src="/static/js/header.js"></script>
 </body>
 </html>

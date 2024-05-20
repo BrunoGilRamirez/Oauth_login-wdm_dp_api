@@ -7,19 +7,12 @@
 <link rel="stylesheet" href="/static/css/styles.css">
 <link rel="stylesheet" href="/static/css/user.css">
 </head>
-<body>
-    <div class="header">
-        <img class="logo" src="/static/weidmueller_logo.svg" alt="Logo">
-        <div class="navigation">
-            <a href="/UI/home">Inicio</a>
-            <a href="/UI/access_keys">Claves de acceso</a>
-            <a href="/UI/user_settings">Configuración de la cuenta</a>
-            <a href="/UI/logout">Cerrar Sesión</a>
-        </div>
-    </div>
+<body onload="header_animation()">
+    {% include 'header/weid_header.html' %}
     <div>
         <h1>Welcome</h1>
     </div>
     </div>
+    <script src="/static/js/header.js"></script>
 </body>
 </html>

@@ -138,25 +138,38 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 @app.post("/UI/user_settings", response_class=HTMLResponse)
 async def user_settings(request: Request, db: Session = Depends(get_db)):
     token=request.session.get("access_token")
-    if request.method== "GET":
-        pass
-    elif request.method == "POST":
-        pass
     if token:
         request_add_token(request, token)
         user = await get_current_user(request, db)
-        if not user:
+        if user:
+            chunk=int(len(user.email)*0.35)
+            email=user.email[:chunk]+"..."+user.email[user.email.find("@"):]
+            message=""
+            if request.method== "GET":
+                pass
+            elif request.method == "POST":
+                form = await request.form()
+                current_pass = form.get('currentPassword')
+                new_pass = form.get('newPassword')
+                verif_code = form.get('verificationCode')
+                clean_form(request)
+                if current_pass and new_pass and verif_code:
+                    if auth_password_reset(session=db, secret=user.secret, code=verif_code, new_password=new_pass, current_password=current_pass):
+                                message="Password changed successfully"
+                    else:
+                        message="Password change failed, check your current password and the verification code"
+            return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user, 'token': token, 'email': email, 'message': message})
+        else:
             request.session.clear()
-            try:
-                request.form(None)
-            except Exception as e:
-                traceback.print_exc()
-            return RedirectResponse(url="/UI/login")
-        #hide part of the mail of the user showing only the first 3 letters and the domain
-        email=user.email[:5]+"..."+user.email[user.email.find("@"):]
-        return temp.TemplateResponse("user/usr_settings.html", {"request": request, "user": user, 'token': token, 'email': email})
-    else:
-        return RedirectResponse(url="/UI/login")
+            clean_form(request) 
+    return RedirectResponse(url="/UI/login")
+def clean_form(request: Request):
+    try:
+        request._form = None
+        return request
+    except Exception as e:
+        traceback.print_exc()
+        return False
     
 @app.get("/UI/access_keys", response_class=HTMLResponse)
 @app.post("/UI/access_keys", response_class=HTMLResponse)
@@ -203,8 +216,8 @@ async def code_pass(user: User = Depends(get_user_secret_Oa2), db: Session = Dep
             if  check_if_still_on_valid_time(code.valid_until) is False:
                 if delete_code(db, code):
                     code,time = generate_security_code(db=db, user=user.secret, operation=2,return_time=True)
-                    #if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
-                    if True:
+                    if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                    #if True:
                         timeleft = time - datetime.now()
                         return {"Expires": timeleft}
             elif code.value is not None:
@@ -213,8 +226,8 @@ async def code_pass(user: User = Depends(get_user_secret_Oa2), db: Session = Dep
                 return {"Expires": timeleft}
         elif code is False:
             code,time = generate_security_code(db=db, user=user.secret, operation=2,return_time=True)
-            #if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
-            if True:
+            if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+            #if True:
                 timeleft = time - datetime.now()
                 return {"Expires": timeleft}
 

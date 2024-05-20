@@ -119,6 +119,23 @@ def authenticate_user(session: Session, username: str, password: str)-> bool|Use
     if not verify_password(password, get_password_by_owner(session, user.secret).value):
         return False
     return user
+def auth_password_reset(session: Session, secret:str, code: str, new_password: str, current_password:str)->bool:
+    user = get_all_user_info(session, secret=secret)
+    code = get_code_by_value(session, code)
+    still_valid=check_if_still_on_valid_time(code.valid_until) if isinstance(code, Codes) else False
+    verification = verify_password(current_password, get_password_by_owner(session, user.secret).value)
+    print(f"User: {user}, Code: {code}, Still valid: {still_valid}, Verification: {verification}")
+    if isinstance(user, User) and isinstance(code, Codes) and still_valid and verification:
+        print (f"if statement: {user.secret} == {code.owner}: {user.secret == code.owner} type user secret: {type(user.secret)} type code owner: {type(code.owner)}")
+        if user.secret == code.owner:
+            print("User and code owner match")
+            flag_update = update_password(session, user.secret, get_password_hash(new_password))
+            flag_delete = delete_code(session, code)
+            print(f"Update: {flag_update}, Delete: {flag_delete}")
+            if flag_update and flag_delete:
+                return True
+
+    return False
 async def get_current_user_API(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
