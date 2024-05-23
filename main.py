@@ -252,7 +252,7 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
             timeleft = None
             if request.method == "GET":
                 message = "Code sent to your email."
-                code = get_code_by_owner_operation(db,user.secret,2)
+                code = get_code_by_owner_operation(db,user.secret,1)
                 if isinstance(code, Codes):
                     if  check_if_still_on_valid_time(code.valid_until) is False:
                         if delete_code(db, code):
