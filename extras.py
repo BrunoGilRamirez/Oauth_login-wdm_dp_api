@@ -35,6 +35,13 @@ def get_db():
         db.close()
 
 #------------------------------------- security ------------------------------------------
+def create_session_secret(secret:str, metadata:str, client:str)->list[str,str,datetime]:
+    #generate a random number  of 20 digits
+    code = str(secrets.randbelow(10**20))
+    time_created = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    data = {'secret':secret, 'metadata':metadata, 'client':client, 'session_code':code, 'time_created':time_created}
+    return pwd_context.hash(str(data)), code, time_created
+
 def generate_user_secret(name:str, role:str, email:str, employer:str, security:str):
     #generate a hash of the user data dictionary
     data = {'name':name, 'role':role, 'email':email, 'employer':employer, 'security':security}
@@ -48,9 +55,10 @@ def check_if_still_on_valid_time(valid_until: str)->bool:
         return True
     else:
         return False
-def lockdown_user(db: Session, code: str, current_password: str, new_password: str)->str|bool:
-    code = get_code_by_value(db, code)
-    still_valid=check_if_still_on_valid_time(code.valid_until)
+def lockdown_user(db: Session, code: str, current_password: str, new_password: str, secret:str)->str|bool:
+    code = get_code_by_value_operation_owner(db, code, 1, secret)
+    print(f"Code: {code}")
+    still_valid=check_if_still_on_valid_time(code.valid_until) if isinstance(code, Codes) else False
     if isinstance(code, Codes) and still_valid:
         secret = code.owner
         keys = get_keys_by_owner(db, secret)

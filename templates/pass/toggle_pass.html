@@ -1,5 +1,5 @@
 <div class="password-change-container" id="passwordChangeContainer">
-    <form action="{{path}}" method="POST">
+    <form action="/UI/user_settings" method="POST">
         <label for="currentPassword">Contraseña Actual:</label>
         <input type="password" id="currentPassword" name="currentPassword" oninput="disable_box()" required><br><br>
         <label for="newPassword">Nueva Contraseña:</label>
@@ -25,15 +25,14 @@
         <label for="confirmPassword">Confirmar Contraseña:</label>
         <input type="password" id="confirmPassword" name="confirmPassword" oninput="disable_box()" required>
         <p class="error-mess-pass" id="message"></p>
+        <div class="check-aceptar" id="check-aceptar">
+            <label>Aceptar Cambios  <input type="checkbox" id="check" name="check" onchange="triggerCodeVerification('{{token}}')"></label><br><br>
+        </div>
         {% include 'transitions/waiting.html' %}
         <div class="verif-code-container" id="verifCode">
             <label for="verificationCode">Código de Verificación:</label>
             <input type="text" id="verificationCode" name="verificationCode" oninput="checkVer()" required><br><br>
-            <p class="feedback" id="feedback">
-                {% if xpr_tm %}
-                Se ha enviado un código de verificación a su correo electrónico y expirará a las:  {{ xpr_tm }}
-                {% endif %}
-            </p>
+            <p class="feedback" id="feedback"></p>
             <input type="submit" value="Guardar Cambios" id="submit">
         </div>
     </form>

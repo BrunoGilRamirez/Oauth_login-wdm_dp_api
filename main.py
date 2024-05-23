@@ -75,10 +75,11 @@ async def login(request: Request, db: Session = Depends(get_db)):
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "This user does not exist or the password is incorrect"})
         elif user.valid is False:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "You need to verify your account with the URL sent to your registered email."})
-        data={"sub": user.secret}
+        client_=str(request.client._asdict())
+        session_secret,code_,time_created_ = create_session_secret(secret=user.secret, metadata=str(request.headers.items()), client=client_)
+        data={"sub": session_secret}
         access_token, expires = encrypt_data(data, timedelta(days=14))
         meta=request.headers.items()
-        meta.append(("client", str(request.client._asdict())))
         meta=str(meta)
         flag=create_session(db, 
                        SessionCreate(owner=user.secret, 
@@ -86,7 +87,10 @@ async def login(request: Request, db: Session = Depends(get_db)):
                                      valid_until=expires.strftime('%Y-%m-%d %H:%M:%S'), 
                                      valid=True, 
                                      metadata_=meta, 
-                                     value=access_token
+                                     client=client_,
+                                     value=access_token,
+                                     code=code_,
+                                     time_created=time_created_
                                      )
                                 )
         if not flag:
@@ -97,8 +101,8 @@ async def login(request: Request, db: Session = Depends(get_db)):
                        template="new_session.html", 
                        context={"username": user.name, 
                                 "creation_date": datetime.now().strftime("%d/%m/%Y"), 
-                                "metadata": meta, 
-                                "link":f"{request.base_url}lockdown/{encode_secret(user.secret)}"
+                                "metadata": client_, 
+                                "link":f"{request.base_url}lockdown/{encode_secret(access_token)}"
                                 }
                         )
             if not email_sended:
@@ -237,25 +241,46 @@ async def code_pass(user: User = Depends(get_user_secret_Oa2), db: Session = Dep
 async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db)):
     '''When this endpoint is called, it sends a security code to the user's email.
     If the request is a POST, it will reset the user's password and disable all the user's sessions and tokens if the security code is correct.'''
-    user_secret=decode_varification(encoded)
-    if user_secret:
-        user = get_user_by_secret(db, user_secret)
-        if not user:
-            return {"message": "User not found"}
-        if request.method == "GET":
-            code = generate_security_code(db, user)
-            await send_email(db,owner=user,subject="Lockdown Code",template="lockdown.html",context={"username": user.name, "code": code}) 
-            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "message": "Code sent to your email.", "encoded": encoded})#aqui te quedaste
-        elif request.method == "POST":
-            form = await request.form()
-            code = form['code']
-            current_pass = form['currentPassword']
-            new_pass = form['newPassword']
-            feedback = lockdown_user(db, code, current_pass, new_pass)
-            if feedback:
-                return RedirectResponse(url="/UI/login", status_code=303)
-            else:
-                return temp.TemplateResponse("auth/change_pass.html", {"request": request, "error": "Lockdown failed, Your password was not correct or the code was not correct.", "encoded": encoded})
+    session_secret=decode_varification(encoded)
+    user = None
+    if session_secret:
+        session_ = get_session_by_value(db, session_secret)
+        print(session_)
+        if isinstance(session_, Sessions):
+            user = get_user_by_secret(db, session_.owner)
+        if user:
+            timeleft = None
+            if request.method == "GET":
+                message = "Code sent to your email."
+                code = get_code_by_owner_operation(db,user.secret,2)
+                if isinstance(code, Codes):
+                    if  check_if_still_on_valid_time(code.valid_until) is False:
+                        if delete_code(db, code):
+                            code,time = generate_security_code(db=db, user=user.secret, operation=1,return_time=True)
+                            if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                                timeleft = time - datetime.now()
+                    elif code.value is not None:
+                        #transform valid_until string to datetime to calculate the time left
+                        timeleft = code.valid_until - datetime.now()
+                        message = "Code already sent to your email."
+                elif code is False:
+                    code,time = generate_security_code(db=db, user=user.secret, operation=1,return_time=True)
+                    if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                        timeleft = time - datetime.now()
+            elif request.method == "POST":
+                form = await request.form()
+                current_pass = form.get('currentPassword')
+                new_pass = form.get('newPassword')
+                verif_code = form.get('verificationCode')
+                clean_form(request)
+                if current_pass and new_pass and verif_code:
+                    print(f"current_pass: {current_pass}, new_pass: {new_pass}, verif_code: {verif_code}")
+                    if lockdown_user(db=db, code=verif_code, current_password=current_pass, new_password=new_pass, secret=user.secret) :
+                        message = "Password changed successfully, all sessions and tokens disabled"
+                    else:
+                        message= "Password change failed, check your current password and the verification code"
+            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "path":f"/lockdown/{encoded}","message": message, "encoded": encoded,'xpr_tm':timeleft})
+    return RedirectResponse(url="/UI/login")
     
 #--------------------------- API --------------------------------
 @app.post("/key")

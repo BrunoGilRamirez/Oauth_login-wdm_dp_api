@@ -11,11 +11,12 @@ body {
     align-items: center;
     background-color: #333;
     color: #fff;
-    padding: 10px 20px;
+    padding: 5px 20px;
 }
 
 .logo {
     width: 100px;
+    margin-right: 10px;
 }
 .form-logo {
     width: 100px;
@@ -25,19 +26,21 @@ body {
 
 .navigation {
     display: flex;
-    gap: 20px;
+    gap: 5px;
 }
 
 .navigation a {
-    text-decoration: none;
     color: #fff;
+    text-decoration: none;
+    text-align: center;
+    vertical-align: middle;
     padding: 8px 12px;
     border-radius: 4px;
     background-color: #555;
 }
 
 .navigation a:hover {
-    background-color: #777;
+    background-color: rgb(239, 120, 60);
 }
 
 h1 {
