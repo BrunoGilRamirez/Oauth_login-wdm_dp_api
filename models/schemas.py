@@ -99,7 +99,10 @@ class SessionBase(BaseModel):
     valid_until: str
     valid: bool
     metadata_: str
+    client: str
     value: str
+    code: str
+    time_created:str
 class SessionCreate(SessionBase):
     pass
 class Session(SessionBase):

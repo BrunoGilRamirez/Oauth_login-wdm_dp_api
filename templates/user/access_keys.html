@@ -6,6 +6,7 @@
 <title>Claves de Acceso</title>
 <link rel="stylesheet" href="/static/css/styles.css">
 <link rel="stylesheet" href="/static/css/user.css">
+<link rel="stylesheet" href="/static/css/wait.css">
 </head>
 <body onload="header_animation()">
     {% include 'header/weid_header.html' %}
@@ -38,8 +39,9 @@
         <span class="toast-icon"><i class="fas fa-check-circle"></i></span>
         <span>Copiado al portapapeles</span>
     </div>
+    {% include 'transitions/waiting.html' %}
 
-    <script src="/static/js/common.js"></script>
+    <script src="/static/js/ac_keys.js"></script>
     <script src="/static/js/header.js"></script>
 </body>
 </html>

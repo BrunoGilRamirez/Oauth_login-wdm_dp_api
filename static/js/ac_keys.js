@@ -1,5 +1,3 @@
-cached_time = new Date();
-code_sended = false;
 //access keys
 function copyToClipboard(elementId) {
     const text = document.getElementById(elementId).innerText;
@@ -25,6 +23,7 @@ function deleteKey(keyId) {
     // Aquí se debe hacer la solicitud POST al servidor para eliminar la clave con el ID proporcionado
     // Puedes usar Fetch API o Axios para hacer la solicitud
     // Por ejemplo, utilizando Fetch API:
+    showLoader();
     fetch('/UI/access_keys', {
         method: 'POST',
         headers: {
@@ -34,6 +33,7 @@ function deleteKey(keyId) {
         body: JSON.stringify({ keyId: keyId }),
     })
     .then(response => {
+        hideLoader();
         if (response.ok) {
             // Recargar la página después de eliminar la clave
             window.location.reload();
@@ -43,6 +43,7 @@ function deleteKey(keyId) {
     })
     .catch(error => {
         console.error('Error al eliminar la clave:', error);
+        hideLoader();
     });
 }
 
@@ -50,6 +51,7 @@ function generateNewKey() {
     // Aquí se debe hacer la solicitud POST al servidor para generar una nueva clave
     // Puedes usar Fetch API o Axios para hacer la solicitud
     // Por ejemplo, utilizando Fetch API:
+    showLoader();
     fetch('/UI/access_keys', {
         method: 'POST',
         headers: {
@@ -59,6 +61,7 @@ function generateNewKey() {
         body: JSON.stringify({}),
     })
     .then(response => {
+        hideLoader();
         if (response.ok) {
             // Recargar la página después de generar la nueva clave
             window.location.reload();
@@ -68,5 +71,14 @@ function generateNewKey() {
     })
     .catch(error => {
         console.error('Error al generar una nueva clave:', error);
+        hideLoader();
     });
+}
+// animations
+function showLoader() {
+    document.getElementById('backgroundloader').style.display = 'inline-block';
+}
+
+function hideLoader() {
+    document.getElementById('backgroundloader').style.display = 'none';
 }

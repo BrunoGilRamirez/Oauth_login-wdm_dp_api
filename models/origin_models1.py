@@ -1,13 +1,13 @@
 from typing import List
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, SmallInteger,Index, Integer, Numeric, PrimaryKeyConstraint, Table, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, SmallInteger, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
 
 Base = declarative_base()
-metadata = Base.metadata
 
-class companies(Base):
+
+class Companies(Base):
     __tablename__ = 'companies'
     __table_args__ = (
         PrimaryKeyConstraint('id', 'name', name='companies_pkey'),
@@ -21,10 +21,10 @@ class companies(Base):
     registry = mapped_column(Date, nullable=False)
     email = mapped_column(Text)
 
-    users: Mapped[List['users']] = relationship('Users', uselist=True, back_populates='companies')
+    users: Mapped[List['Users']] = relationship('Users', uselist=True, back_populates='companies')
 
 
-class securitywordcompanies(companies):
+class SecurityWordCompanies(Companies):
     __tablename__ = 'security_word_companies'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.companies.id'], ondelete='CASCADE', onupdate='CASCADE', name='owner'),
@@ -37,7 +37,7 @@ class securitywordcompanies(companies):
     value = mapped_column(Text, nullable=False)
 
 
-class users(Base):
+class Users(Base):
     __tablename__ = 'users'
     __table_args__ = (
         ForeignKeyConstraint(['employer'], ['private.companies.id'], name='employer_fk'),
@@ -57,15 +57,15 @@ class users(Base):
     secret = mapped_column(Text, nullable=False)
     valid = mapped_column(Boolean, nullable=False)
 
-    companies: Mapped['companies'] = relationship('Companies', back_populates='users')
-    codes: Mapped[List['codes']] = relationship('Codes', uselist=True, back_populates='users')
-    keys: Mapped[List['keys']] = relationship('Keys', uselist=True, back_populates='users')
-    passwords: Mapped['passwords'] = relationship('Passwords', uselist=False, back_populates='users')
-    security_words: Mapped[List['securitywords']] = relationship('SecurityWords', uselist=True, back_populates='users')
-    sessions: Mapped[List['sessions']] = relationship('Sessions', uselist=True, back_populates='users')
+    companies: Mapped['Companies'] = relationship('Companies', back_populates='users')
+    codes: Mapped[List['Codes']] = relationship('Codes', uselist=True, back_populates='users')
+    keys: Mapped[List['Keys']] = relationship('Keys', uselist=True, back_populates='users')
+    passwords: Mapped['Passwords'] = relationship('Passwords', uselist=False, back_populates='users')
+    security_words: Mapped[List['SecurityWords']] = relationship('SecurityWords', uselist=True, back_populates='users')
+    sessions: Mapped[List['Sessions']] = relationship('Sessions', uselist=True, back_populates='users')
 
 
-class codes(Base):
+class Codes(Base):
     __tablename__ = 'codes'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fk'),
@@ -79,10 +79,10 @@ class codes(Base):
     valid_until = mapped_column(DateTime, nullable=False)
     operation = mapped_column(SmallInteger, nullable=False)
 
-    users: Mapped['users'] = relationship('Users', back_populates='codes')
+    users: Mapped['Users'] = relationship('Users', back_populates='codes')
 
 
-class keys(Base):
+class Keys(Base):
     __tablename__ = 'keys'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner'),
@@ -99,10 +99,10 @@ class keys(Base):
     valid = mapped_column(Boolean, nullable=False)
     metadata_ = mapped_column('metadata', Text)
 
-    users: Mapped['users'] = relationship('Users', back_populates='keys')
+    users: Mapped['Users'] = relationship('Users', back_populates='keys')
 
 
-class passwords(Base):
+class Passwords(Base):
     __tablename__ = 'passwords'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fk'),
@@ -116,10 +116,10 @@ class passwords(Base):
     id = mapped_column(Integer, nullable=False)
     owner = mapped_column(Text, nullable=False)
 
-    users: Mapped['users'] = relationship('Users', back_populates='passwords')
+    users: Mapped['Users'] = relationship('Users', back_populates='passwords')
 
 
-class securitywords(Base):
+class SecurityWords(Base):
     __tablename__ = 'security_words'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_fkey'),
@@ -132,10 +132,10 @@ class securitywords(Base):
     owner = mapped_column(Text, nullable=False)
     id = mapped_column(Integer)
 
-    users: Mapped['users'] = relationship('Users', back_populates='security_words')
+    users: Mapped['Users'] = relationship('Users', back_populates='security_words')
 
 
-class sessions(Base):
+class Sessions(Base):
     __tablename__ = 'sessions'
     __table_args__ = (
         ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner'),
@@ -154,4 +154,4 @@ class sessions(Base):
     code = mapped_column(Text, nullable=False)
     time_created = mapped_column(DateTime, nullable=False)
 
-    users: Mapped['users'] = relationship('Users', back_populates='sessions')
+    users: Mapped['Users'] = relationship('Users', back_populates='sessions')
