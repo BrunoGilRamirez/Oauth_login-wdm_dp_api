@@ -1,40 +1,53 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Information</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <link rel="stylesheet" href="/static/css/pass_reset.css">
-</head>
-<body onload="header_animation()">
-    {% include 'header/weid_header.html' %}
-    <h1>User Information</h1>
-    <div class="table-container">
-        <table>
-            <tr>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Email</th>
-                <th>Employer</th>
-                <th>Phone Number</th>
-            </tr>
-            <tr>
-                <td>{{ user.name }}</td>
-                <td>{{ user.role }}</td>
-                <td>{{ email }}</td>
-                <td>{{ user.companies.name }}</td>
-                <td>{{ user.companies.phone_number }}</td>
-            </tr>
-        </table>
-        <button type="button" class="change-password-btn" onclick="togglePasswordChange()">Cambiar Contraseña</button>
-    </div>
-    {%if message%}
-        <p class="error-message">{{ message }}</p>
-    {%endif%}
-    {% include 'pass/password_block.html' %}
-
-    <script src="/static/js/pass_rules.js"> </script>
-    <script src="/static/js/header.js"></script>
-</body>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>User Information</title>
+        <link rel="stylesheet" href="/static/css/styles.css">
+        <link rel="stylesheet" href="/static/css/pass_reset.css">
+        <link rel="stylesheet" href="/static/css/wait.css">
+    </head>
+    <body onload="header_animation()">
+        {% include 'header/weid_header.html' %}
+        <h1>User Information</h1>
+        <div class="table-container">
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Email</th>
+                    <th>Employer</th>
+                    <th>Phone Number</th>
+                </tr>
+                <tr>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>{{ email }}</td>
+                    <td>{{ user.companies.name }}</td>
+                    <td>{{ user.companies.phone_number }}</td>
+                </tr>
+            </table>
+            <button type="button" class="change-password-btn" onclick="togglePasswordChange()">Cambiar Contraseña</button>
+        </div>
+        {%if message%}
+            <p class="error-message">{{ message }}</p>
+        {%endif%}
+        {% include 'pass/toggle_pass.html' %}
+        <script>
+            function disable_box(){
+                var box_check = document.getElementById("check-aceptar");
+                var flag = checkMatch();
+                if(flag){
+                    box_check.style.display = "block";
+                }
+                else{
+                    box_check.style.display = "none";
+                }
+            }
+        </script>
+        <script src="/static/js/pass_rules.js"> </script>
+        <script src="/static/js/pass_chng_rqst.js"></script>
+        <script src="/static/js/header.js"></script>
+    </body>
 </html>

@@ -240,22 +240,39 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
     user_secret=decode_varification(encoded)
     if user_secret:
         user = get_user_by_secret(db, user_secret)
-        if not user:
-            return {"message": "User not found"}
-        if request.method == "GET":
-            code = generate_security_code(db, user)
-            await send_email(db,owner=user,subject="Lockdown Code",template="lockdown.html",context={"username": user.name, "code": code}) 
-            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "message": "Code sent to your email.", "encoded": encoded})#aqui te quedaste
-        elif request.method == "POST":
-            form = await request.form()
-            code = form['code']
-            current_pass = form['currentPassword']
-            new_pass = form['newPassword']
-            feedback = lockdown_user(db, code, current_pass, new_pass)
-            if feedback:
-                return RedirectResponse(url="/UI/login", status_code=303)
-            else:
-                return temp.TemplateResponse("auth/change_pass.html", {"request": request, "error": "Lockdown failed, Your password was not correct or the code was not correct.", "encoded": encoded})
+        if user:
+            timeleft = None
+            if request.method == "GET":
+                message = "Code sent to your email."
+                code = get_code_by_owner_operation(db,user.secret,2)
+                if isinstance(code, Codes):
+                    if  check_if_still_on_valid_time(code.valid_until) is False:
+                        if delete_code(db, code):
+                            code,time = generate_security_code(db=db, user=user.secret, operation=1,return_time=True)
+                            if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                                timeleft = time - datetime.now()
+                    elif code.value is not None:
+                        #transform valid_until string to datetime to calculate the time left
+                        timeleft = code.valid_until - datetime.now()
+                        message = "Code already sent to your email."
+                elif code is False:
+                    code,time = generate_security_code(db=db, user=user.secret, operation=1,return_time=True)
+                    if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                        timeleft = time - datetime.now()
+            elif request.method == "POST":
+                form = await request.form()
+                current_pass = form.get('currentPassword')
+                new_pass = form.get('newPassword')
+                verif_code = form.get('verificationCode')
+                clean_form(request)
+                if current_pass and new_pass and verif_code:
+                    print(f"current_pass: {current_pass}, new_pass: {new_pass}, verif_code: {verif_code}")
+                    if lockdown_user(db=db, code=verif_code, current_password=current_pass, new_password=new_pass, secret=user.secret) :
+                        message = "Password changed successfully, all sessions and tokens disabled"
+                    else:
+                        message= "Password change failed, check your current password and the verification code"
+            return temp.TemplateResponse("auth/change_pass.html", {"request": request, "path":f"/lockdown/{encoded}","message": message, "encoded": encoded,'xpr_tm':timeleft})
+    return RedirectResponse(url="/UI/login")
     
 #--------------------------- API --------------------------------
 @app.post("/key")
