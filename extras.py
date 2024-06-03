@@ -436,7 +436,7 @@ def validate_token(token: str|None, db: Session) -> bool:
     else:
         return False
     
-def request_add_token(request: Request, token: str):
+def add_token_to_request(request: Request, token: str):
     """
     Adds the provided token to the Authorization header of the request.
 
@@ -453,21 +453,6 @@ def request_add_token(request: Request, token: str):
     request.scope.update(headers=request.headers.raw)
     return request
 
-def request_remove_token(request: Request):
-    """
-    Removes the 'Authorization' header from the given request object.
-
-    Args:
-        - request (Request): The request object from which to remove the 'Authorization' header.
-
-    Returns:
-        - Request: The modified request object with the 'Authorization' header removed.
-    """
-    new_headers = MutableHeaders(request._headers)
-    new_headers.pop("Authorization")
-    request._headers = new_headers
-    request.scope.update(headers=request.headers.raw)
-    return request
 
 #------------------------------------- session utilities -------------------------------------
 def validate_user_session(request: Request, db: Session) -> bool:
@@ -484,8 +469,7 @@ def validate_user_session(request: Request, db: Session) -> bool:
     token = request.session.get("access_token")
     if token:
         return get_session_by_value(db, token)
-    else:
-        return False
+    return False
     
 def delete_user_session(request: Request, db: Session) -> bool:
     """
@@ -501,32 +485,7 @@ def delete_user_session(request: Request, db: Session) -> bool:
     token = request.session.get("access_token")
     if token:
         return delete_session(db, token)
-    else:
-        return False
-    
-#------------------------------------- validate token or session -------------------------------------
-def validate_token_or_session(token: str, db: Session) -> bool|Keys:
-    """
-    Validates the given token or session.
-
-    Args:
-        - token (str): The token to validate.
-        - session (Session): The session to validate.
-
-    Returns:
-        - bool|Keys: Returns True if the token or session is valid, otherwise returns False or the Keys object.
-
-    """
-    try:
-        key = get_keys_by_value(db, token)
-    except:
-        pass
-    try:
-        key = get_session_by_value(db, token)
-    except:
-        pass
-    if key and key.valid and check_if_still_on_valid_time(key.valid_until):
-        return decode_and_verify(key.owner, db)
+    return False
     
 #------------------------------------- async mail sender -------------------------------------
 async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None)->bool:

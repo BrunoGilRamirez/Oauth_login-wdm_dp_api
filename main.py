@@ -63,7 +63,7 @@ async def read_home(request: Request, db: Session = Depends(get_db)):
     """
     token = request.session.get("access_token")
     if token:
-        request_add_token(request, token)
+        add_token_to_request(request, token)
         user = await get_current_user(request, db)
         if user:
             return RedirectResponse(url="/UI/home")
@@ -176,7 +176,7 @@ async def home(request: Request, db: Session = Depends(get_db)):
         pass
     if token:
         user = False
-        request_add_token(request, token)
+        add_token_to_request(request, token)
         user = await get_current_user(request, db)
         if user:
             return temp.TemplateResponse("user/home.html", {"request": request})
@@ -218,7 +218,7 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
     """
     token=request.session.get("access_token")
     if token:
-        request_add_token(request, token)
+        add_token_to_request(request, token)
         user = await get_current_user(request, db)
         if user:
             chunk=int(len(user.email)*0.35)
@@ -260,7 +260,7 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
     """
     token=request.session.get("access_token")
     if token:
-        request_add_token(request, token)
+        add_token_to_request(request, token)
         user = await get_current_user(request, db)
         if isinstance(user, User):
             keys = get_keys_by_owner(db, user.secret)
