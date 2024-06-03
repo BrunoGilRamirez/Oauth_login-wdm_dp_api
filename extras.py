@@ -24,7 +24,6 @@ pwd_context = CryptContext(schemes=[scheme], deprecated="auto") # bcrypt is the 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="key")
 messenger = Sender(os.getenv('email'), os.getenv('password'))
 
-#------------------------------------- session -------------------------------------
 
 #------------------------------------- database -------------------------------------
 def get_db():
@@ -40,13 +39,9 @@ def get_db():
     """
     db = session_root()
     try:
-        yield db
-    finally:
-        db.close()
-def get_db():
-    db = session_root()
-    try:
         yield db #yield is used to create a generator function
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
     finally:
         db.close()
 
