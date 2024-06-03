@@ -1,3 +1,10 @@
+"""
+This file contains the main code for an OAuth login web application using FastAPI.
+It includes various endpoints for user registration, login, home page, user settings, access keys, and logout.
+"""
+
+import os
+# Rest of the code...
 import os
 #local imports
 from models.models import *
@@ -32,6 +39,11 @@ async def passive_auth(request: Request, call_next):
 #--------------------------- icons --------------------------------
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
+    """
+    Returns a FileResponse object for the favicon.ico file.
+
+    :return: FileResponse object for the favicon.ico file.
+    """
     file_name = "favicon.ico"
     file_path = os.path.join(app.root_path, "static", file_name)
     return FileResponse(path=file_path, headers={"Content-Disposition": "attachment; filename=" + file_name})
@@ -39,24 +51,43 @@ async def favicon():
 #--------------------------- root --------------------------------
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle the request for the home page.
+
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        - RedirectResponse: A redirect response to the appropriate page.
+    """
     token = request.session.get("access_token")
     if token:
-        if validate_token(token,db):
+        if validate_token(token, db):
             return RedirectResponse(url="/UI/home")
         else:
             request.session.pop("access_token")
-    return RedirectResponse(url="/UI/login", status_code=303) #303 is the code for "See Other" (since HTTP/1.1
+    return RedirectResponse(url="/UI/login", status_code=303)  # 303 is the code for "See Other" (since HTTP/1.1)
 
 #--------------------------- UI --------------------------------
 @app.get("/UI/register", response_class=HTMLResponse)
 @app.post("/UI/register", response_class=HTMLResponse)
 async def register(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle the registration process for a user.
+
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        - Union[TemplateResponse, RedirectResponse]: The response object based on the request method and registration outcome.
+    """
     if request.method == "GET":
         return temp.TemplateResponse("auth/register.html", {"request": request})
     elif request.method == "POST":
         feedback = await register_user(request, db)
         if isinstance(feedback, str) and feedback != "User already exists":
-
             return RedirectResponse(url="/UI/login", status_code=303)
         elif feedback == False:
             return temp.TemplateResponse("auth/register.html", {"request": request, "error": feedback})
@@ -66,6 +97,16 @@ async def register(request: Request, db: Session = Depends(get_db)):
 @app.get("/UI/login", response_class=HTMLResponse)
 @app.post("/UI/login", response_class=RedirectResponse)
 async def login(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle the login functionality for the UI.
+
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        - RedirectResponse: The redirect response to the home page if login is successful.
+    """
     if request.method == "GET":
         return temp.TemplateResponse("auth/login.html", {"request": request, "origin": "UI"})
     elif request.method == "POST":
@@ -115,6 +156,17 @@ async def login(request: Request, db: Session = Depends(get_db)):
 @app.get("/UI/home", response_class=HTMLResponse)
 @app.post("/UI/home", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle the '/UI/home' endpoint for both GET and POST requests.
+
+    Parameters:
+    - request (Request): The incoming request object.
+    - db (Session, optional): The database session. Defaults to the result of the 'get_db' dependency.
+
+    Returns:
+    - TemplateResponse: The response containing the rendered HTML template.
+
+    """
     token=request.session.get("access_token")
     if request.method== "GET":
         pass
@@ -133,7 +185,17 @@ async def home(request: Request, db: Session = Depends(get_db)):
     
 @app.get("/UI/logout", response_class=RedirectResponse)
 async def logout(request: Request, db: Session = Depends(get_db)):
-    delete_user_session(request,db=db)
+    """
+    Logout endpoint that clears the user session and redirects to the home page.
+
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        - RedirectResponse: A redirect response to the home page.
+    """
+    delete_user_session(request, db=db)
     request.session.clear()
     response = RedirectResponse(url="/")
     return response
@@ -141,6 +203,17 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 @app.get("/UI/user_settings", response_class=HTMLResponse)
 @app.post("/UI/user_settings", response_class=HTMLResponse)
 async def user_settings(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle the '/UI/user_settings' endpoint for both GET and POST requests.
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        - Union[TemplateResponse, RedirectResponse]: The response object based on the request method.
+    If the request method is GET, the response is the rendered HTML template.
+    If the request method is POST, the response is a redirect to the home page.
+    """
     token=request.session.get("access_token")
     if token:
         request_add_token(request, token)
@@ -167,17 +240,22 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
             request.session.clear()
             clean_form(request) 
     return RedirectResponse(url="/UI/login")
-def clean_form(request: Request):
-    try:
-        request._form = None
-        return request
-    except Exception as e:
-        traceback.print_exc()
-        return False
+
     
 @app.get("/UI/access_keys", response_class=HTMLResponse)
 @app.post("/UI/access_keys", response_class=HTMLResponse)
 async def access_keys(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle the '/UI/access_keys' endpoint for both GET and POST requests.
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        - Union[TemplateResponse, RedirectResponse]: The response object based on the request method.
+    If the request method is GET, the response is the rendered HTML template.
+    If the request method is POST, the response is a redirect to the home page.
+    """
     token=request.session.get("access_token")
     if token:
         request_add_token(request, token)
@@ -201,6 +279,15 @@ async def access_keys(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/UI/verify/{encoded}", include_in_schema=False)
 async def verify(encoded:str, db: Session = Depends(get_db)):
+    """
+    Handle the '/UI/verify/{encoded}' endpoint.
+    GET: Verifies the user.
+    Args:
+        - encoded (str): The encoded user secret.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+    Returns:
+        - dict: A dictionary containing the message, if the user is verified or not.
+    """
     print(encoded)
     user_secret=decode_varification(encoded)
     print(user_secret)
@@ -214,6 +301,16 @@ async def verify(encoded:str, db: Session = Depends(get_db)):
 
 @app.get("/UI/code-pass")
 async def code_pass(user: User = Depends(get_user_secret_Oa2), db: Session = Depends(get_db)):
+    """
+    Handle the '/UI/code-pass' endpoint.
+    GET: Sends the Code to change the password.
+    Args:
+        - user (User, optional): The user object. Defaults to Depends(get_user_secret_Oa2).
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+        
+    Returns:
+        - dict: A dictionary containing the time left.
+    """
     if isinstance(user, User):
         code = get_code_by_owner_operation(db,user.secret,2)
         if isinstance(code, Codes):
@@ -240,7 +337,16 @@ async def code_pass(user: User = Depends(get_user_secret_Oa2), db: Session = Dep
 @app.post("/lockdown/{encoded}", include_in_schema=False)
 async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db)):
     '''When this endpoint is called, it sends a security code to the user's email.
-    If the request is a POST, it will reset the user's password and disable all the user's sessions and tokens if the security code is correct.'''
+    If the request is a POST, it will reset the user's password and disable all the user's sessions and tokens if the security code is correct.
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+        - encoded (str): The encoded session secret.
+    Returns:
+        - Union[TemplateResponse, RedirectResponse]: The response object based on the request method.
+    If the request method is GET, the response is the rendered HTML template.
+    If the request method is POST, the response is a redirect to the home page.
+    '''
     session_secret=decode_varification(encoded)
     user = None
     if session_secret:
@@ -282,17 +388,4 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
             return temp.TemplateResponse("auth/change_pass.html", {"request": request, "path":f"/lockdown/{encoded}","message": message, "encoded": encoded,'xpr_tm':timeleft})
     return RedirectResponse(url="/UI/login")
     
-#--------------------------- API --------------------------------
-@app.post("/key")
-async def login_for_access_key(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db))-> Token:
-    user = authenticate_user(session, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(days=float(5))
-    access_token = await create_access_token(session,data={"sub": user.secret}, expires_delta=access_token_expires)
-    return Token(access_token=access_token, token_type="bearer")
 
