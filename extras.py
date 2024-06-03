@@ -122,6 +122,121 @@ def check_if_still_on_valid_time(valid_until: str) -> bool:
         return True
     else:
         return False
+
+def generate_security_code(db: Session, user: str, operation:int, return_time: bool=False)->bool|int|tuple[int,datetime]:
+    '''
+    Generates a random code and stores it in the database with the user as the owner. The code is valid for 5 minutes.
+
+    Args:
+        - db (Session): The database session.
+        - user (str): The user's secret.
+        - operation (int): The operation to be performed with the code. 1 for password reset, 2 for user verification.
+        - return_time (bool, optional): If True, returns the code and the time it is valid until. Otherwise, returns only the code. Defaults to False.
+
+    Returns:
+        - Union[bool, int, Tuple[int, datetime]]: The generated code if successful, otherwise returns False. If return_time is True, returns a tuple containing the code and the time it is valid until.
+    '''
+    code = str(secrets.randbelow(10**8)) #generate a random 8-digit code
+    time=datetime.now() + timedelta(minutes=5, seconds=1) 
+    time_set=time.strftime('%Y-%m-%d %H:%M:%S')
+    if create_code(db, CodeCreate(owner=user, value=code,valid_until=time_set, operation=operation)):
+        if return_time: return code, time
+        return code
+    else:
+        return False
+
+def auth_password_reset(db: Session, secret:str, code: str, new_password: str, current_password:str)->bool:
+    """
+    Resets the password for a user if the provided secret, code, and current password are valid.
+
+    Args:
+        - session (Session): The session object for the database connection.
+        - secret (str): The secret associated with the user.
+        - code (str): The code used for verification.
+        - new_password (str): The new password to set.
+        - current_password (str): The current password for verification.
+
+    Returns:
+        - bool: True if the password is successfully reset, False otherwise.
+    """
+    user = get_all_user_info(db, secret=secret)
+    code = get_code_by_value(db, code)
+    still_valid=check_if_still_on_valid_time(code.valid_until) if isinstance(code, Codes) else False
+    verification = verify_password(current_password, get_password_by_owner(db, user.secret).value)
+    print(f"User: {user}, Code: {code}, Still valid: {still_valid}, Verification: {verification}")
+    if isinstance(user, User) and isinstance(code, Codes) and still_valid and verification:
+        print (f"if statement: {user.secret} == {code.owner}: {user.secret == code.owner} type user secret: {type(user.secret)} type code owner: {type(code.owner)}")
+        if user.secret == code.owner:
+            print("User and code owner match")
+            flag_update = update_password(db, user.secret, get_password_hash(new_password))
+            flag_delete = delete_code(db, code)
+            print(f"Update: {flag_update}, Delete: {flag_delete}")
+            if flag_update and flag_delete:
+                return True
+    return False
+
+#------------------------------------- User utilities -------------------------------------
+async def register_user(request: Request, db: Session) -> bool|str:
+    """
+    Register a new user.
+
+    Args:
+        - request (Request): The incoming request object.
+        - session (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        - Union[bool, str]: Returns the secret key if the user is successfully registered, False if there was an error during registration, or a string indicating that the user already exists.
+    """
+    form_data = await request.form()
+    username = form_data['name']
+    role = form_data['role']
+    email = form_data['email']
+    employer = form_data['employer']
+    security_word = form_data['security']
+    password = get_password_hash(form_data['password'])
+    employer_id = get_companies_by_name(db, employer)
+    if not employer_id:
+        create_company(db, CompanyCreate(name=employer, phone_number=0, registry=datetime.now().strftime('%Y-%m-%d'), email='not given'))
+        employer_id = get_companies_by_name(db, employer)
+    secret=generate_user_secret(username, role, email, employer, security_word)
+    user = UserCreate(name=username, role=role, email=email, employer=employer_id, secret=secret, valid=False)
+    sec_word=SecurityWordCreate(owner=secret, word=security_word)
+    encoded_secret = encode_secret(secret)
+    if not user_exists(db, user):
+        if messenger.send_template_email(recipient=email,
+                                         subject="Welcome to Weidmüller Data Product API",
+                                         template="welcome.html",
+                                         context={"username": username, 
+                                                  "creation_date": datetime.now().strftime("%d/%m/%Y"),
+                                                  "verification_link": f"{request.base_url}UI/verify/{encoded_secret}"
+                                                 }
+                                        ):
+            if create_user(db, user) and create_password(db, PasswordCreate(value=password, owner=user.secret)) and create_security_word(db, sec_word):
+                return secret
+            else:
+                return False
+    else:
+        return "User already exists"
+    
+def authenticate_user(db: Session, username: str, password: str) -> bool|Users:
+    """
+    Authenticates a user by checking if the provided username and password match the stored credentials.
+
+    Args:
+        - session (Session): The database session object.
+        - username (str): The username or email of the user.
+        - password (str): The password of the user.
+
+    Returns:
+        - bool|Users: Returns the user object if authentication is successful, otherwise returns False.
+    """
+    user = get_user_by_email(db, username)
+    if not user:
+        return False
+    if not verify_password(password, get_password_by_owner(db, user.secret).value):
+        return False
+    return user
+
 def lockdown_user(db: Session, code: str, current_password: str, new_password: str, secret:str)->str|bool:
     """
     Locks down a user by updating their password and invalidating their sessions and keys.
@@ -152,154 +267,9 @@ def lockdown_user(db: Session, code: str, current_password: str, new_password: s
                     if update_password(db, secret,get_password_hash(new_password)):
                         return True
     return False
-def generate_security_code(db: Session, user: str, operation:int, return_time: bool=False)->bool|int|tuple[int,datetime]:
-    '''
-    Generates a random code and stores it in the database with the user as the owner. The code is valid for 5 minutes.
 
-    Args:
-        - db (Session): The database session.
-        - user (str): The user's secret.
-        - operation (int): The operation to be performed with the code. 1 for password reset, 2 for user verification.
-        - return_time (bool, optional): If True, returns the code and the time it is valid until. Otherwise, returns only the code. Defaults to False.
 
-    Returns:
-        - Union[bool, int, Tuple[int, datetime]]: The generated code if successful, otherwise returns False. If return_time is True, returns a tuple containing the code and the time it is valid until.
-    '''
-    code = str(secrets.randbelow(10**8)) #generate a random 8-digit code
-    time=datetime.now() + timedelta(minutes=5, seconds=1) 
-    time_set=time.strftime('%Y-%m-%d %H:%M:%S')
-    if create_code(db, CodeCreate(owner=user, value=code,valid_until=time_set, operation=operation)):
-        if return_time: return code, time
-        return code
-    else:
-        return False
-
-#------------------------------------- User utilities -------------------------------------
-async def register_user(request: Request, session: Session = Depends(get_db)) -> bool|str:
-    """
-    Register a new user.
-
-    Args:
-        - request (Request): The incoming request object.
-        - session (Session, optional): The database session. Defaults to Depends(get_db).
-
-    Returns:
-        - Union[bool, str]: Returns the secret key if the user is successfully registered, False if there was an error during registration, or a string indicating that the user already exists.
-    """
-    form_data = await request.form()
-    username = form_data['name']
-    role = form_data['role']
-    email = form_data['email']
-    employer = form_data['employer']
-    security_word = form_data['security']
-    password = get_password_hash(form_data['password'])
-    employer_id = get_companies_by_name(session, employer)
-    if not employer_id:
-        create_company(session, CompanyCreate(name=employer, phone_number=0, registry=datetime.now().strftime('%Y-%m-%d'), email='not given'))
-        employer_id = get_companies_by_name(session, employer)
-    secret=generate_user_secret(username, role, email, employer, security_word)
-    user = UserCreate(name=username, role=role, email=email, employer=employer_id, secret=secret, valid=False)
-    sec_word=SecurityWordCreate(owner=secret, word=security_word)
-    encoded_secret = encode_secret(secret)
-    if not user_exists(session, user):
-        if messenger.send_template_email(recipient=email,
-                                         subject="Welcome to Weidmüller Data Product API",
-                                         template="welcome.html",
-                                         context={"username": username, 
-                                                  "creation_date": datetime.now().strftime("%d/%m/%Y"),
-                                                  "verification_link": f"{request.base_url}UI/verify/{encoded_secret}"
-                                                 }
-                                        ):
-            if create_user(session, user) and create_password(session, PasswordCreate(value=password, owner=user.secret)) and create_security_word(session, sec_word):
-                return secret
-            else:
-                return False
-    else:
-        return "User already exists"
-    
-def authenticate_user(session: Session, username: str, password: str) -> bool|Users:
-    """
-    Authenticates a user by checking if the provided username and password match the stored credentials.
-
-    Args:
-        - session (Session): The database session object.
-        - username (str): The username or email of the user.
-        - password (str): The password of the user.
-
-    Returns:
-        - bool|Users: Returns the user object if authentication is successful, otherwise returns False.
-    """
-    user = get_user_by_email(session, username)
-    if not user:
-        return False
-    if not verify_password(password, get_password_by_owner(session, user.secret).value):
-        return False
-    return user
-
-def auth_password_reset(session: Session, secret:str, code: str, new_password: str, current_password:str)->bool:
-    """
-    Resets the password for a user if the provided secret, code, and current password are valid.
-
-    Args:
-        - session (Session): The session object for the database connection.
-        - secret (str): The secret associated with the user.
-        - code (str): The code used for verification.
-        - new_password (str): The new password to set.
-        - current_password (str): The current password for verification.
-
-    Returns:
-        - bool: True if the password is successfully reset, False otherwise.
-    """
-    user = get_all_user_info(session, secret=secret)
-    code = get_code_by_value(session, code)
-    still_valid=check_if_still_on_valid_time(code.valid_until) if isinstance(code, Codes) else False
-    verification = verify_password(current_password, get_password_by_owner(session, user.secret).value)
-    print(f"User: {user}, Code: {code}, Still valid: {still_valid}, Verification: {verification}")
-    if isinstance(user, User) and isinstance(code, Codes) and still_valid and verification:
-        print (f"if statement: {user.secret} == {code.owner}: {user.secret == code.owner} type user secret: {type(user.secret)} type code owner: {type(code.owner)}")
-        if user.secret == code.owner:
-            print("User and code owner match")
-            flag_update = update_password(session, user.secret, get_password_hash(new_password))
-            flag_delete = delete_code(session, code)
-            print(f"Update: {flag_update}, Delete: {flag_delete}")
-            if flag_update and flag_delete:
-                return True
-    return False
-
-async def get_current_user_API(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db)):
-    """
-    Retrieves the current authenticated user based on the provided token.
-
-    Args:
-        - token (str): The authentication token.
-        - session (Session): The database session.
-
-    Returns:
-        - bool: True if the user is authenticated, False otherwise.
-
-    Raises:
-        - HTTPException: If the token does not exist or is no longer valid.
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token does not exist or is no longer valid",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        key = get_keys_by_value(session, token)
-        if isinstance(key,Keys) and key.valid:
-            if check_if_still_on_valid_time(key.valid_until) is False:
-                raise credentials_exception
-            else:
-                user = decode_and_verify(key.owner, session)
-                print(type(user))
-                if isinstance(user, User):
-                    return True #the user is authenticated
-    except:
-        traceback.print_exc()
-        raise credentials_exception
-
-async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db))->str:
+async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db))->str:
     """
     - Retrieves the user secret for OAuth2 authentication.
 
@@ -319,10 +289,10 @@ async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), session: Sess
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        sess = get_session_by_value(session, token)
+        sess = get_session_by_value(db, token)
         if isinstance(sess,Sessions):
             if check_if_still_on_valid_time(sess.valid_until):
-                user = decode_and_verify(sess.owner, session)
+                user = decode_and_verify(sess.owner, db)
                 print(type(user))
                 if isinstance(user, User):
                     return user
@@ -330,7 +300,7 @@ async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), session: Sess
         traceback.print_exc()    
     raise credentials_exception
 
-async def get_current_user(request: Request, session: Session = Depends(get_db)):
+async def get_current_user(request: Request, db: Session = Depends(get_db)):
     """
     Retrieves the current user based on the provided request and session.
 
@@ -341,22 +311,17 @@ async def get_current_user(request: Request, session: Session = Depends(get_db))
     Returns:
         - Union[bool, Any]: The decoded and verified user if valid, otherwise False.
     """
+    Error_raise = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Could not validate credentials",
+                                headers={"WWW-Authenticate": "Bearer"},
+                                )   
     try:
         token = await oauth2_scheme(request)
+        session = get_session_by_value(db, token)
+        if session and session.valid and check_if_still_on_valid_time(session.valid_until):
+            return decode_and_verify(session.owner, db)
     except:
-        raise False
-    try:
-        key = get_keys_by_value(session, token)
-    except:
-        pass
-    try:
-        key = get_session_by_value(session, token)
-    except:
-        pass
-    if key and key.valid and check_if_still_on_valid_time(key.valid_until):
-        return decode_and_verify(key.owner, session)
-    else:
-        return False
+        raise Error_raise
     
 def decode_and_verify(secret: str, db: Session):
     """
@@ -414,12 +379,12 @@ def verify_user(secret: str, db: Session):
         else:
             return False
 #------------------------------------- token utilities -------------------------------------
-async def create_access_token(session: Session, data: dict, expires_delta: timedelta, request: Request=None) -> str:
+async def create_access_token(db: Session, data: dict, expires_delta: timedelta, request: Request=None) -> str:
     """
     Creates an access token for the given data.
 
     Args:
-        - session (Session): The session object.
+        - db (Session): The session object.
         - data (dict): The data to be encoded in the access token.
         - expires_delta (timedelta): The expiration time for the access token.
         - request (Request, optional): The request object. Defaults to None.
@@ -442,13 +407,13 @@ async def create_access_token(session: Session, data: dict, expires_delta: timed
                      valid=True, 
                      metadata_=str(meta)
                     )
-    if create_key(session, Key_):
-        await send_email(session, data.get("sub"), "New Token", "new_token.html", { "creation_date": datetime.now().strftime("%d/%m/%Y"), "new_token": encoded_jwt})
+    if create_key(db, Key_):
+        await send_email(db, data.get("sub"), "New Token", "new_token.html", { "creation_date": datetime.now().strftime("%d/%m/%Y"), "new_token": encoded_jwt})
         return encoded_jwt
     else:
         return False
 
-def validate_token(token: str|None, session: Session) -> bool:
+def validate_token(token: str|None, db: Session) -> bool:
     """
     Validates the given token and returns the user information if the token is valid.
 
@@ -460,11 +425,11 @@ def validate_token(token: str|None, session: Session) -> bool:
         - bool: Returns the user information if the token is valid, otherwise returns False.
     """
     if isinstance(token, str):
-        key = get_keys_by_value(session, token)
+        key = get_keys_by_value(db, token)
         if key:
             payload = jwt.decode(token, secret_key_ps, algorithms=[ALGORITHM])
             secret: str = payload.get("sub")
-            user = get_all_user_info(session, secret=secret)
+            user = get_all_user_info(db, secret=secret)
             return user
         else:
             return False
@@ -540,7 +505,7 @@ def delete_user_session(request: Request, db: Session) -> bool:
         return False
     
 #------------------------------------- validate token or session -------------------------------------
-def validate_token_or_session(token: str, session: Session) -> bool|Keys:
+def validate_token_or_session(token: str, db: Session) -> bool|Keys:
     """
     Validates the given token or session.
 
@@ -553,15 +518,15 @@ def validate_token_or_session(token: str, session: Session) -> bool|Keys:
 
     """
     try:
-        key = get_keys_by_value(session, token)
+        key = get_keys_by_value(db, token)
     except:
         pass
     try:
-        key = get_session_by_value(session, token)
+        key = get_session_by_value(db, token)
     except:
         pass
     if key and key.valid and check_if_still_on_valid_time(key.valid_until):
-        return decode_and_verify(key.owner, session)
+        return decode_and_verify(key.owner, db)
     
 #------------------------------------- async mail sender -------------------------------------
 async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None)->bool:

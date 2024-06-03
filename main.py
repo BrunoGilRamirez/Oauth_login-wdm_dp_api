@@ -63,7 +63,9 @@ async def read_home(request: Request, db: Session = Depends(get_db)):
     """
     token = request.session.get("access_token")
     if token:
-        if validate_token(token, db):
+        request_add_token(request, token)
+        user = await get_current_user(request, db)
+        if user:
             return RedirectResponse(url="/UI/home")
         else:
             request.session.pop("access_token")
@@ -231,7 +233,7 @@ async def user_settings(request: Request, db: Session = Depends(get_db)):
                 verif_code = form.get('verificationCode')
                 clean_form(request)
                 if current_pass and new_pass and verif_code:
-                    if auth_password_reset(session=db, secret=user.secret, code=verif_code, new_password=new_pass, current_password=current_pass):
+                    if auth_password_reset(db=db, secret=user.secret, code=verif_code, new_password=new_pass, current_password=current_pass):
                                 message="Password changed successfully"
                     else:
                         message="Password change failed, check your current password and the verification code"
