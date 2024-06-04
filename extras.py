@@ -11,7 +11,7 @@ from starlette.datastructures import MutableHeaders
 import secrets
 import traceback
 import os
-
+from sqlalchemy import exc
 #------------------------------------- cryptography -------------------------------------
 session_root = get_session('.env.local')
 secret_key_ps = os.getenv('secret_key_ps')
@@ -40,7 +40,8 @@ def get_db():
     db = session_root()
     try:
         yield db #yield is used to create a generator function
-    except Exception as e:
+    except exc.SQLAlchemyError:
+        traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
     finally:
         db.close()
