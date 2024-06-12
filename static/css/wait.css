@@ -3,7 +3,7 @@
 .backgroundloader{
     display: none; /* Oculto por defecto */
     position: fixed;
-    padding-top: 40%;
+    padding-top: 400px;
     top: 0;
     left: 0;
     width: 100%;
@@ -13,10 +13,16 @@
     justify-content: center;
     align-items: center;
 }
+.backgroundloader p {
+    font-size: 24px;
+    color: #ffffff;
+    text-align: center;
+    margin-top: 20px;
+}
 
 .loader {
-    border: 16px solid #f3f3f3;
-    border-top: 16px solid #3498db;
+    border: 16px solid #ffffff;
+    border-top: 16px solid #ef7800;
     border-radius: 50%;
     width: 120px;
     height: 120px;
