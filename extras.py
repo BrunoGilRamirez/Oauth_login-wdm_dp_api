@@ -41,6 +41,11 @@ def get_db():
     try:
         yield db #yield is used to create a generator function
     except exc.SQLAlchemyError:
+        print("caught by get_db module")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
+    except Exception:
+        print("caught by get_db module")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
     finally:
