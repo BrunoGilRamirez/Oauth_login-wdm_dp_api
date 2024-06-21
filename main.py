@@ -294,11 +294,9 @@ async def verify(encoded:str, db: Session = Depends(get_db)):
     user_secret=decode_verification(encoded)
     if user_secret:
         if verify_user(user_secret,db):
-            return {"message": "User verified"}
+            return {"message": "User verified."}
         else:
-            return {"message": "User not verified"}
-    else:
-        return {"message": "User not found"}
+            return {"message": "The user does not exists."}
 
 @app.get("/UI/code-pass")
 async def code_pass(user: User = Depends(get_user_secret_Oa2), db: Session = Depends(get_db)):

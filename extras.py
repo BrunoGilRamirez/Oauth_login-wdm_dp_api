@@ -1,3 +1,5 @@
+import aiohttp.client_exceptions
+import pg8000.exceptions
 from models.schemas import *
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -12,6 +14,8 @@ import secrets
 import traceback
 import os
 from sqlalchemy import exc
+import aiohttp
+import pg8000
 #------------------------------------- cryptography -------------------------------------
 session_root = get_session('.env.local')
 secret_key_ps = os.getenv('secret_key_ps')
@@ -40,15 +44,15 @@ def get_db():
     db = session_root()
     try:
         yield db #yield is used to create a generator function
-    except exc.OperationalError as e:
+    except exc.SQLAlchemyError:
         print("caught by get_db module")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
-    except exc.DatabaseError:
+    except pg8000.exceptions.InterfaceError as e:
         print("caught by get_db module")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
-    except exc.InterfaceError:
+    except aiohttp.client_exceptions.ClientResponseError:
         print("caught by get_db module")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
@@ -275,7 +279,7 @@ def lockdown_user(db: Session, code: str, current_password: str, new_password: s
     return False
 
 
-async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db))->str:
+async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db))->User:
     """
     - Retrieves the user secret for OAuth2 authentication.
 
@@ -289,11 +293,6 @@ async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), db: Session =
     Raises:
         - HTTPException: If the token does not exist or is no longer valid.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token does not exist or is no longer valid",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         sess = get_session_by_value(db, token)
         if isinstance(sess,Sessions):
@@ -304,7 +303,7 @@ async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), db: Session =
                     return user
     except:
         traceback.print_exc()    
-    raise credentials_exception
+    return None
 
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
     """
@@ -326,8 +325,9 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         session = get_session_by_value(db, token)
         if session and session.valid and check_if_still_on_valid_time(session.valid_until):
             return decode_and_verify(session.owner, db)
-    except:
-        raise Error_raise
+    except pg8000.Error:
+        print("An error occurred in get_current_user")
+        traceback.print_exc()
     
 def decode_and_verify(secret: str, db: Session):
     """
@@ -381,6 +381,8 @@ def verify_user(secret: str, db: Session):
             user.valid = True
             if update_user(db, user.id, user):
                 return True
+            else:
+                raise HTTPException(status_code=status.HTTP_200_OK, detail="User was not verified, by some internal failure, please try again.")
         elif user.valid:
             return True
     return False

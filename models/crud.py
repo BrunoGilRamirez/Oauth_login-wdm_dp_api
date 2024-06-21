@@ -49,6 +49,12 @@ def user_exists(db: Session, user: UserCreate) -> bool:
     else:
         return False
 #------------------- Users -------------------
+def user_exists(db: Session, secret:str) -> bool:
+    user = db.query(Users).filter(Users.secret == secret).first()
+    if user:
+        return True
+    else:
+        return False
 def create_user(db: Session, user: UserCreate) -> bool:
     new_user = Users(**user.model_dump())
     try:
