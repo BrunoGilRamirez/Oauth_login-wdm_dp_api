@@ -80,18 +80,18 @@ def get_user_by_email(db: Session, email: str) -> Users|bool:
         return False
 def get_all_user_info(db: Session, user: UserCreate|None=None, secret: str|None=None) -> User|bool:
     if user is not None:
-        user = db.query(Users).filter(Users.name == user.name, Users.email == user.email, Users.employer == user.employer).first()
-    else:
-        user = db.query(Users).filter(Users.secret == secret).first()
-        id= user.id
-    employer = db.query(Companies).filter(Companies.id == user.employer).first()
-    if user and employer:
-        employer_schema = Company(id=employer.id,name=employer.name, phone_number=employer.phone_number, registry=str(employer.registry), email=employer.email)
-        return User( id=user.id, name=user.name,role=user.role, email=user.email, employer=user.employer, secret=user.secret, companies=employer_schema, valid=user.valid)
-    else:
-        return False
+        user_ = db.query(Users).filter(Users.name == user.name, Users.email == user.email, Users.employer == user.employer).first()
+    if secret is not None:
+        user_ = db.query(Users).filter(Users.secret == secret).first()
+    if isinstance(user_, Users):
+        employer = db.query(Companies).filter(Companies.id == user_.employer).first()
+        if isinstance(employer, Companies):
+            employer_schema = Company(id=employer.id,name=employer.name, phone_number=employer.phone_number, registry=str(employer.registry), email=employer.email)
+            return User( id=user_.id, name=user_.name,role=user_.role, email=user_.email, employer=user_.employer, secret=user_.secret, companies=employer_schema, valid=user_.valid)
+    
+    return False
 
-def update_user(db: Session, user_id: int, user: User) -> Users|bool:
+def update_user(db: Session, user_id: int, user: User) ->bool:
     try:
         db.query(Users).filter(Users.id == user_id).update({
             Users.id: user.id,
@@ -103,7 +103,7 @@ def update_user(db: Session, user_id: int, user: User) -> Users|bool:
             Users.valid: user.valid
         })
         db.commit()
-        return get_user_by_email(db, user.email)
+        return True
     except Exception as e:
         traceback.print_exc()
         db.rollback()

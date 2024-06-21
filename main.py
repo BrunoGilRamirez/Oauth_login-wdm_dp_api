@@ -291,8 +291,7 @@ async def verify(encoded:str, db: Session = Depends(get_db)):
         - dict: A dictionary containing the message, if the user is verified or not.
     """
     print(encoded)
-    user_secret=decode_varification(encoded)
-    print(user_secret)
+    user_secret=decode_verification(encoded)
     if user_secret:
         if verify_user(user_secret,db):
             return {"message": "User verified"}
@@ -349,7 +348,7 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
     If the request method is GET, the response is the rendered HTML template.
     If the request method is POST, the response is a redirect to the home page.
     '''
-    session_secret=decode_varification(encoded)
+    session_secret=decode_verification(encoded)
     user = None
     if session_secret:
         session_ = get_session_by_value(db, session_secret)

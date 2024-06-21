@@ -1,0 +1,14 @@
+# Very important to do:
+    -toadd: todo_file
+        -description: todo file needed.
+        -status: done
+    - tofix: verify-non_existant_encoded_user_secret
+        -description: if the secret does not exist in verify endpoint parameter encoded, the message will be displayed instead of "The database is offline, for maintenance purposes."
+        - files: main.py
+            - endpoint: "verify"
+        - Solution_advice: check the the module get_db in extras.py modify the exception handler.
+        - status: Testing
+    - toadd: pass_rules-to_registration
+        - description: the password rules and checker to the register templates
+        - files: "templates/auth/register.html", "static/js/pass_rules", "static/css/auth.css"
+        - status: not initialized

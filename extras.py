@@ -40,11 +40,11 @@ def get_db():
     db = session_root()
     try:
         yield db #yield is used to create a generator function
-    except exc.SQLAlchemyError:
+    except exc.OperationalError as e:
         print("caught by get_db module")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
-    except Exception:
+    except exc.DatabaseError:
         print("caught by get_db module")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="The database is offline, for maintenance purposes.")
@@ -204,15 +204,16 @@ async def register_user(request: Request, db: Session) -> bool|str:
     sec_word=SecurityWordCreate(owner=secret, word=security_word)
     encoded_secret = encode_secret(secret)
     if not user_exists(db, user):
-        if messenger.send_template_email(recipient=email,
-                                         subject="Welcome to Weidmüller Data Product API",
-                                         template="welcome.html",
-                                         context={"username": username, 
-                                                  "creation_date": datetime.now().strftime("%d/%m/%Y"),
-                                                  "verification_link": f"{request.base_url}UI/verify/{encoded_secret}"
-                                                 }
-                                        ):
-            if create_user(db, user) and create_password(db, PasswordCreate(value=password, owner=user.secret)) and create_security_word(db, sec_word):
+        
+        if create_user(db, user) and create_password(db, PasswordCreate(value=password, owner=user.secret)) and create_security_word(db, sec_word):
+            if messenger.send_template_email(recipient=email,
+                                        subject="Welcome to Weidmüller Data Product API",
+                                        template="welcome.html",
+                                        context={"username": username, 
+                                                "creation_date": datetime.now().strftime("%d/%m/%Y"),
+                                                "verification_link": f"{request.base_url}UI/verify/{encoded_secret}"
+                                                }
+                                    ):
                 return secret
             else:
                 return False
@@ -372,13 +373,13 @@ def verify_user(secret: str, db: Session):
     """
     user = get_all_user_info(db, secret=secret)
     if isinstance(user, User):
-        user.valid = True
-        print(user.valid)
-        confirm = update_user(db, user.id, user)
-        if isinstance(confirm, Users):
+        if not user.valid:
+            user.valid = True
+            if update_user(db, user.id, user):
+                return True
+        elif user.valid:
             return True
-        else:
-            return False
+    return False
 #------------------------------------- token utilities -------------------------------------
 async def create_access_token(db: Session, data: dict, expires_delta: timedelta, request: Request=None) -> str:
     """
@@ -524,7 +525,7 @@ async def send_email(db:Session, owner: str|User|Users, subject: str, template: 
     else:
         return False
     
-def decode_varification(encoded:str) -> str|bool:
+def decode_verification(encoded:str) -> str|bool:
     """
     Decode the given encoded string using JWT and return the secret key.
 
