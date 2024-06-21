@@ -7,7 +7,7 @@
         - files: main.py
             - endpoint: "verify"
         - Solution_advice: check the the module get_db in extras.py modify the exception handler.
-        - status: Testing
+        - status: done
     - toadd: pass_rules-to_registration
         - description: the password rules and checker to the register templates
         - files: "templates/auth/register.html", "static/js/pass_rules", "static/css/auth.css"
