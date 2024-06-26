@@ -1,0 +1,46 @@
+.message-container,
+.error-container {
+    display: none;
+    position:fixed;
+    top: 40%;
+    left: 40%;
+    right: 40%;
+    width: 20%;
+    height: auto;
+    max-width: 200px;
+    min-width: 80px;
+    padding-top: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-bottom: 29px;
+    border-radius: 8px;
+    border-width: 5px;
+    border-color: #333;
+    border-style: solid;
+    z-index: 1000;
+    background-color: #ef7800 ;
+    color: white;
+    align-items: center;;
+}
+
+.message-container .message-button-confirm,
+.error-container .message-button-close {
+    left: 20px;
+    width: auto;
+    font-size: 14px;
+    cursor: pointer;
+    color: white;
+    border-radius: 8px;
+    background-color: #333;
+}
+
+.message-container .message-button-confirm{
+    background-color: #4CAF50;
+}
+.message-container .message-button-confirm:hover
+    {
+        background-color: #45a031;
+    }
+.error-container .message-button-close:hover {
+    background-color: #3334;
+}

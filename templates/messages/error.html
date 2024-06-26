@@ -1,0 +1,23 @@
+<div class="error-container" id="errorContainer">
+    <p>Error: 
+        <span id="errorMessage"></span>
+    </p>
+    <button class="message-button-close" onclick="hideError()">Cerrar</button>
+</div>
+{% if error %}
+    <script>
+        function showError(message) {
+            var errorContainer = document.getElementById('errorContainer');
+            var errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorContainer.style.display = 'block';
+        }
+        showError("{{ error }}");
+    </script>
+{% endif %}
+<script>
+    function hideError() {
+        var errorContainer = document.getElementById('errorContainer');
+        errorContainer.style.display = 'none';
+    }
+</script>

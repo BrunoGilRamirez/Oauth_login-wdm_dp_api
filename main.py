@@ -290,7 +290,6 @@ async def verify(encoded:str, db: Session = Depends(get_db)):
     Returns:
         - dict: A dictionary containing the message, if the user is verified or not.
     """
-    print(encoded)
     user_secret=decode_verification(encoded)
     if user_secret:
         if verify_user(user_secret,db):
@@ -350,7 +349,6 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
     user = None
     if session_secret:
         session_ = get_session_by_value(db, session_secret)
-        print(session_)
         if isinstance(session_, Sessions):
             user = get_user_by_secret(db, session_.owner)
         if user:
@@ -379,7 +377,6 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
                 verif_code = form.get('verificationCode')
                 clean_form(request)
                 if current_pass and new_pass and verif_code:
-                    print(f"current_pass: {current_pass}, new_pass: {new_pass}, verif_code: {verif_code}")
                     if lockdown_user(db=db, code=verif_code, current_password=current_pass, new_password=new_pass, secret=user.secret) :
                         message = "Password changed successfully, all sessions and tokens disabled"
                     else:

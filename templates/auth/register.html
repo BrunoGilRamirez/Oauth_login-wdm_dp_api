@@ -5,12 +5,15 @@
 <title>Registro de Usuarios</title>
 <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 <link rel="stylesheet" href="/static/css/styles.css">
+<link rel="stylesheet" href="/static/css/password.css">
 <link rel="stylesheet" href="/static/css/auth.css">
+<link rel="stylesheet" href="/static/css/wait.css">
+<link rel="stylesheet" href="/static/css/messages.css">">
 </head>
 <body>
     <div class="container">
         <img class="form-logo" src="/static/weidmueller_logo.svg" alt="Logo">
-    <h2>Registro de Usuarios</h2>
+        <h2>Registro de Usuarios</h2>
         <form action="/UI/register" method="POST">
             <label for="name">Nombre:</label>
             <input type="text" id="name" name="name" required><br><br>
@@ -22,29 +25,12 @@
             <input type="text" id="employer" name="employer" required><br><br>
             <label for="security">Palabra de Seguridad:</label>
             <input type="text" id="security" name="security" required><br><br>
-            <label for="password">Contraseña:</label>
-            <input type="password" id="password" name="password" required><br><br>
-            <input type="submit" value="Registrarse">
+            {% include 'pass/password_block_register.html' %}
+            <input class= "register" type="submit" value="Registrarse" id="submit" disabled>
             <a href="/UI/login"><input type="button" value="Login"></a>
         </form>
     </div>
-    <div class="error-container" id="errorContainer">
-        <p>Error: <span id="errorMessage"></span></p>
-        <button onclick="hideError()">Cerrar</button>
-    </div>
-    {% if error %}
-    <script>
-        function showError(message) {
-            document.getElementById('errorMessage').textContent = message;
-            document.getElementById('errorContainer').classList.add('active');
-        }
-
-        function hideError() {
-            document.getElementById('errorContainer').classList.remove('active');
-        }
-        
-        showError("{{ error }}");
-    </script>
-    {% endif %}
+    {% include 'messages/error.html' %}
+    <script src="/static/js/pass_rules_r.js"> </script>
 </body>
 </html>

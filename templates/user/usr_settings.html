@@ -7,6 +7,7 @@
         <link rel="stylesheet" href="/static/css/styles.css">
         <link rel="stylesheet" href="/static/css/pass_reset.css">
         <link rel="stylesheet" href="/static/css/wait.css">
+        <link rel="stylesheet" href="/static/css/messages.css">
     </head>
     <body onload="header_animation()">
         {% include 'header/weid_header.html' %}
@@ -30,9 +31,7 @@
             </table>
             <button type="button" class="change-password-btn" onclick="togglePasswordChange()">Cambiar Contraseña</button>
         </div>
-        {%if message%}
-            <p class="error-message">{{ message }}</p>
-        {%endif%}
+        {% include 'messages/confirm.html' %}
         {% include 'pass/toggle_pass.html' %}
         <script>
             function disable_box(){

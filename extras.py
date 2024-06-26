@@ -172,14 +172,10 @@ def auth_password_reset(db: Session, secret:str, code: str, new_password: str, c
     code = get_code_by_value(db, code)
     still_valid=check_if_still_on_valid_time(code.valid_until) if isinstance(code, Codes) else False
     verification = verify_password(current_password, get_password_by_owner(db, user.secret).value)
-    print(f"User: {user}, Code: {code}, Still valid: {still_valid}, Verification: {verification}")
     if isinstance(user, User) and isinstance(code, Codes) and still_valid and verification:
-        print (f"if statement: {user.secret} == {code.owner}: {user.secret == code.owner} type user secret: {type(user.secret)} type code owner: {type(code.owner)}")
         if user.secret == code.owner:
-            print("User and code owner match")
             flag_update = update_password(db, user.secret, get_password_hash(new_password))
             flag_delete = delete_code(db, code)
-            print(f"Update: {flag_update}, Delete: {flag_delete}")
             if flag_update and flag_delete:
                 return True
     return False
@@ -262,14 +258,11 @@ def lockdown_user(db: Session, code: str, current_password: str, new_password: s
         - bool: True if the user was successfully locked down, False otherwise.
     """
     code = get_code_by_value_operation_owner(db, code, 1, secret)
-    print(f"Code: {code}")
     still_valid=check_if_still_on_valid_time(code.valid_until) if isinstance(code, Codes) else False
     if isinstance(code, Codes) and still_valid:
         secret = code.owner
         keys = get_keys_by_owner(db, secret)
         sessions = get_sessions_by_owner(db, secret)
-        print(f"Keys: {keys}")
-        print(f"Sessions: {sessions}")
         if verify_password(current_password, get_password_by_owner(db, secret).value):
             #update the valid field of all the keys and sessions to False
             if isinstance(keys, list) and isinstance(sessions, list):
@@ -298,7 +291,6 @@ async def get_user_secret_Oa2(token: str = Depends(oauth2_scheme), db: Session =
         if isinstance(sess,Sessions):
             if check_if_still_on_valid_time(sess.valid_until):
                 user = decode_and_verify(sess.owner, db)
-                print(type(user))
                 if isinstance(user, User):
                     return user
     except:

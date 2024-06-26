@@ -11,4 +11,19 @@
     - toadd: pass_rules-to_registration
         - description: the password rules and checker to the register templates
         - files: "templates/auth/register.html", "static/js/pass_rules", "static/css/auth.css"
-        - status: not initialized
+        - files_added: "templates/pass/password_block_register.html", "static/js/pass_rules_r.js", "static/css/password.css" "templates/pass/rules.html"
+        - status: done
+
+    - tofix: emergent messages and errors
+        - description: need to fix how a message or error message is displayed in login, register, access_keys and user_settings.
+        - files: "templates/auth/login.html", "templates/auth/register.html",  "templates/auth/access_keys.html", "templates/auth/user_settings.html" 
+        - files_added: "static/css/messages.css", "templates/messages/error.html", "templates/messages/confirm.html"
+        - status: done
+    -toadd: forgotten_password endpoint
+        - description: need a way to recover the password once forgotten
+        - files: "templates/auth/login.html", main.py
+        - files_toadd: "templates/auth/forgotten"
+        - modules_toadd: 
+            - main.py: the endpoint function 
+            - extras.py: A limiter for codes daily generated, a user code generator for forgotten protocole. 
+        - status: not initialized. 

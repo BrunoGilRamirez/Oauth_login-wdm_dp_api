@@ -1,0 +1,21 @@
+<div class="message-container" id="messageContainer">
+    <p>Mensaje: <span id="message"></span></p>
+    <button class="message-button-confirm" onclick="hideError()">Cerrar</button>
+</div>
+{% if message %}
+<script>
+    function showError(message) {
+        var messageContainer = document.getElementById('messageContainer');
+        var messageElement = document.getElementById('message');
+        messageElement.textContent = message;
+        messageContainer.style.display = 'block';
+    }
+    showError("{{ message }}");
+</script>
+{% endif %}
+<script>
+    function hideError() {
+        var messageContainer = document.getElementById('messageContainer');
+        messageContainer.style.display = 'none';
+    }
+</script>
