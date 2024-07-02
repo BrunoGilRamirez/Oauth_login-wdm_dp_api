@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, SmallInteger,Index, Integer, Numeric, PrimaryKeyConstraint, Table, Text, UniqueConstraint
+from sqlalchemy import ARRAY, BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, SmallInteger,Index, Integer, Numeric, PrimaryKeyConstraint, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
 
@@ -61,6 +61,7 @@ class users(Base):
     codes: Mapped[List['codes']] = relationship('Codes', uselist=True, back_populates='users')
     keys: Mapped[List['keys']] = relationship('Keys', uselist=True, back_populates='users')
     passwords: Mapped['passwords'] = relationship('Passwords', uselist=False, back_populates='users')
+    recovery_sessions: Mapped[List['recoverysessions']] = relationship('RecoverySessions', uselist=True, back_populates='users')
     security_words: Mapped[List['securitywords']] = relationship('SecurityWords', uselist=True, back_populates='users')
     sessions: Mapped[List['sessions']] = relationship('Sessions', uselist=True, back_populates='users')
 
@@ -118,6 +119,21 @@ class passwords(Base):
 
     users: Mapped['users'] = relationship('Users', back_populates='passwords')
 
+class recoverysessions(Base):
+    __tablename__ = 'recovery_sessions'
+    __table_args__ = (
+        ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_rs_fk'),
+        PrimaryKeyConstraint('value', name='recovery_sessions_pkey'),
+        Index('fki_owner_rs_fk', 'owner'),
+        {'schema': 'private'}
+    )
+
+    owner = mapped_column(Text, nullable=False)
+    value = mapped_column(Text)
+    registry = mapped_column(DateTime(True), nullable=False)
+    expires = mapped_column(DateTime, nullable=False)
+
+    users: Mapped['users'] = relationship('Users', back_populates='recovery_sessions')
 
 class securitywords(Base):
     __tablename__ = 'security_words'

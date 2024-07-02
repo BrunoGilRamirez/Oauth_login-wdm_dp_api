@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import desc, DateTime
 from models.models import *
 from models.schemas import *
+from datetime import datetime
 import traceback
 #------------------- Companies -------------------
 def create_company(db: Session, company: CompanyCreate) -> Companies|bool:
@@ -339,3 +341,47 @@ def update_valid_list_of_sessions(db: Session, sessions: list[Session]) -> bool:
         db.rollback()
         return False
     
+
+# --------------------------- recovery sessions ---------------------------
+
+def create_recovery_session(db: Session, recovery_session: RecoverySessionCreate) -> bool:
+    new_recovery_session = RecoverySessions(**recovery_session.model_dump())
+    try:
+        db.add(new_recovery_session)
+        db.commit()
+        return True
+    except Exception as e:
+        traceback.print_exc()
+        db.rollback()
+        return False
+def get_recovery_sessions_by_owner(db: Session, owner: str) -> list[RecoverySessions]|bool:
+    try:
+        return db.query(RecoverySessions)\
+            .filter(RecoverySessions.owner == owner)\
+            .order_by(desc(RecoverySessions.expires)) \
+            .all()
+    except Exception as e:
+        traceback.print_exc()
+        return False
+
+def get_recovery_sessions_by_owner_and_expires(db: Session, owner: str, expires: str) -> RecoverySessions|list[RecoverySessions]:
+    expires_dt = datetime.strptime(expires, "%Y-%m-%d %H:%M:%S")
+    try:
+        return db.query(RecoverySessions)\
+            .filter(RecoverySessions.owner == owner, RecoverySessions.expires == expires_dt)\
+            .order_by(desc(RecoverySessions.expires)) \
+            .all()
+    except Exception as e:
+        traceback.print_exc()
+        return None
+    
+def delete_recovery_session(db: Session, value: str):
+    try:
+        recovery_session = db.query(RecoverySessions).filter(RecoverySessions.value == value).first()
+        db.delete(recovery_session)
+        db.commit()
+        return True
+    except Exception as e:
+        traceback.print_exc()
+        db.rollback()
+        return False

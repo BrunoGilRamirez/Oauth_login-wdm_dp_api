@@ -1,21 +1,17 @@
-import aiohttp.client_exceptions
-import pg8000.exceptions
+from models.crud import *
+from cryptical_op import codes
+from session_management import get_session
 from models.schemas import *
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Request
-from models.crud import *
 from emailsender.sender import Sender
-from session_management import get_session
 from fastapi.security import OAuth2PasswordBearer
 from starlette.datastructures import MutableHeaders
-import secrets
-import traceback
-import os
 from sqlalchemy import exc
-import aiohttp
-import pg8000
+import traceback, os, aiohttp, pg8000, random
+
 #------------------------------------- cryptography -------------------------------------
 session_root = get_session('.env.local')
 secret_key_ps = os.getenv('secret_key_ps')
@@ -60,23 +56,7 @@ def get_db():
         db.close()
 
 #------------------------------------- security ------------------------------------------
-def create_session_secret(secret:str, metadata:str, client:str)->list[str,str,datetime]:
-    """
-    Generates a session secret code and returns a hashed version of the data along with the code and creation time.
 
-    Args:
-        - secret (str): The secret value.
-        - metadata (str): The metadata value.
-        - client (str): The client value.
-
-    Returns:
-        - tuple: A tuple containing the hashed data, session code, and time created.
-    """
-    #generate a random number  of 20 digits
-    code = str(secrets.randbelow(10**20))
-    time_created = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    data = {'secret':secret, 'metadata':metadata, 'client':client, 'session_code':code, 'time_created':time_created}
-    return pwd_context.hash(str(data)), code, time_created
 
 def generate_user_secret(name:str, role:str, email:str, employer:str, security:str):
     """
@@ -145,7 +125,7 @@ def generate_security_code(db: Session, user: str, operation:int, return_time: b
     Returns:
         - Union[bool, int, Tuple[int, datetime]]: The generated code if successful, otherwise returns False. If return_time is True, returns a tuple containing the code and the time it is valid until.
     '''
-    code = str(secrets.randbelow(10**8)) #generate a random 8-digit code
+    code = str(codes.simple_code())
     time=datetime.now() + timedelta(minutes=5, seconds=1) 
     time_set=time.strftime('%Y-%m-%d %H:%M:%S')
     if create_code(db, CodeCreate(owner=user, value=code,valid_until=time_set, operation=operation)):
@@ -153,6 +133,66 @@ def generate_security_code(db: Session, user: str, operation:int, return_time: b
         return code
     else:
         return False
+    
+def generate_recovery_session(db: Session, user: Users) -> tuple[str,str]:
+    """ Generates a recovery session based in a random elements, and register to the database.
+
+    Args: 
+        - db (Session): The database session.
+        - user (Users): The user to generate a recovery session for.
+
+    Returns:
+        - str: The generated recovery session.
+    """
+    r_sessions_created = get_recovery_sessions_by_owner(db, user.secret)
+    if len(r_sessions_created) <32 and isinstance(r_sessions_created, list): #check how to insert another check for the list.
+        flag=False
+        if len(r_sessions_created) == 0:
+            flag=True
+        else:
+                flag= has_24_hours(r_sessions_created[0])
+        if flag:
+            code = str(codes.simple_code(y=16))
+            ccode= codes.alphan_code(length=(random.randint(10,20)))
+            time = datetime.now() 
+            time_ex= time+ timedelta(minutes=15, seconds=1) 
+            time_set=time_ex.strftime('%Y-%m-%d %H:%M:%S')
+            pre_session = {
+                'name':user.name,
+                'email':user.email,
+                'code':code,
+                'cryptical_code': ccode,
+                'time_left':time_set
+            }
+            value_r = pwd_context.hash(str(pre_session))
+            session_r = RecoverySessionCreate(
+                owner= user.secret,
+                value= value_r,
+                registry=time.strftime('%Y-%m-%d %H:%M:%S'),
+                expires=time_set
+            )
+
+            if create_recovery_session(db, session_r):
+                return jwt.encode(pre_session, secret_key_ps, algorithm=ALGORITHM), value_r
+    
+    return None
+
+def verify_recovery_session(db: Session, session_: str) -> Users:
+    r_session = jwt.decode(session_, secret_key_ps, algorithms=[ALGORITHM])
+    if isinstance(r_session, dict):
+        user= get_user_by_email(db, r_session['email'])
+        if user:
+            time_left = r_session['time_left']
+            r_session_stored = get_recovery_sessions_by_owner_and_expires(db, owner= user.secret, expires=time_left)
+            print(f"the dict is {r_session}\n the stored are {r_session_stored}")
+            for session in r_session_stored:
+                if pwd_context.verify(str(r_session), session.value): # todo: check if still valid
+                    return get_user_by_secret(db, session.owner)
+    return None
+
+
+def forgotten_password(db: Session, user: str, return_time: bool=False)->bool|int|tuple[int,datetime]:
+    pass
 
 def auth_password_reset(db: Session, secret:str, code: str, new_password: str, current_password:str)->bool:
     """
@@ -179,6 +219,7 @@ def auth_password_reset(db: Session, secret:str, code: str, new_password: str, c
             if flag_update and flag_delete:
                 return True
     return False
+
 
 #------------------------------------- User utilities -------------------------------------
 async def register_user(request: Request, db: Session) -> bool|str:
@@ -569,3 +610,20 @@ def clean_form(request: Request):
     except Exception as e:
         traceback.print_exc()
         return False
+    
+
+#------------------------------ time --------------------------------
+def has_24_hours(timestamp_str: str) -> bool:
+    """
+    Checks if the given timestamp is older than 24 hours.
+
+    Args:
+        - timestamp_str (str): The timestamp string in the format "YYYY-MM-DD HH:MM:SS".
+
+    Returns:
+        - bool: True if the timestamp is older than 24 hours, False otherwise.
+    """
+    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+    time = datetime.now()
+    timedelta_ = time - timestamp
+    return timedelta_ > timedelta(hours=24)

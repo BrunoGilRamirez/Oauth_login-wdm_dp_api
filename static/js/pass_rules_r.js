@@ -1,6 +1,6 @@
 
 function checkMatch_r() {
-    var password = document.getElementById("currentPassword").value;
+    var password = document.getElementById("password").value;
     var password2 = document.getElementById("confirmPassword").value;
     var submitButton = document.getElementById("submit");
 
@@ -30,7 +30,7 @@ function checkMatch_r() {
 }
 
 function display_pass_score(){
-    var password = document.getElementById("currentPassword").value;
+    var password = document.getElementById("password").value;
     var scorebar = document.getElementById("bar");
     var rules = document.getElementById("rules");
     var barSegments = document.querySelectorAll('.bar-segment');
@@ -103,7 +103,7 @@ function checkPassStrength(pass){
 
 function toggleMessage(msg, color) {
     var errorMessage = document.getElementById("message");
-    var input_password = document.getElementById("currentPassword");
+    var input_password = document.getElementById("password");
     var input_confirm_password = document.getElementById("confirmPassword");
     errorMessage.innerHTML = JSON.stringify(msg, null, 4);
     errorMessage.style.color = color;
@@ -114,3 +114,31 @@ function toggleMessage(msg, color) {
     input_confirm_password.style.borderColor = color;
 }
 
+function checkVer() {
+    var page = window.location.pathname;
+    var code = document.getElementById("verificationCode").value;
+    var submitButton = document.getElementById("submit");
+    var errorMessage = document.getElementById("message");
+    if (code !== "" && code.length === 8) {
+        if (page === "/UI/user_settings") {
+            var box_check = document.getElementById("check-aceptar");
+            box_check.style.display = "block";
+        }
+        submitButton.disabled = false;
+        submitButton.style.cursor = "pointer";
+        submitButton.style.backgroundColor = "#45a049";
+        errorMessage.style.display = "none";
+    }
+    if (code === "") {
+        if (page === "/UI/forgotten_password/recovery") {
+            var box_check = document.getElementById("check-aceptar");
+            box_check.style.display = "none";
+        }
+        submitButton.disabled = true;
+        submitButton.style.cursor = "not-allowed";
+        submitButton.style.backgroundColor = "#cccccc";
+        box_check.style.display = "none";
+        errorMessage.style.display = "block";
+        errorMessage.innerHTML = "El código no puede estar vacío";
+    }
+}

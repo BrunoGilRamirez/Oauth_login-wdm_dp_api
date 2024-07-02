@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 #starlette imports
 import traceback
 from starlette.middleware.sessions import SessionMiddleware
+from cryptical_op.codes import create_session_secret
 
 
 
@@ -113,13 +114,13 @@ async def login(request: Request, db: Session = Depends(get_db)):
         return temp.TemplateResponse("auth/login.html", {"request": request, "origin": "UI"})
     elif request.method == "POST":
         form_data = await request.form()
-        user = authenticate_user(db,form_data['username'], form_data['password'])
+        user = authenticate_user(db,form_data['email'], form_data['password'])
         if user is False:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "This user does not exist or the password is incorrect"})
         elif user.valid is False:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "You need to verify your account with the URL sent to your registered email."})
         client_=str(request.client._asdict())
-        session_secret,code_,time_created_ = create_session_secret(secret=user.secret, metadata=str(request.headers.items()), client=client_)
+        session_secret,code_,time_created_ = create_session_secret(context=pwd_context ,secret=user.secret, metadata=str(request.headers.items()), client=client_)
         data={"sub": session_secret}
         access_token, expires = encrypt_data(data, timedelta(days=14))
         meta=request.headers.items()
@@ -383,5 +384,74 @@ async def lockdown(request: Request, encoded:str, db: Session = Depends(get_db))
                         message= "Password change failed, check your current password and the verification code"
             return temp.TemplateResponse("auth/change_pass.html", {"request": request, "path":f"/lockdown/{encoded}","message": message, "encoded": encoded,'xpr_tm':timeleft})
     return RedirectResponse(url="/UI/login")
+
+@app.get('/UI/forgotten_password')
+@app.post('/UI/forgotten_password')
+async def forgotten_password(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle the '/UI/forgotten_password' endpoint.
+    GET: Sends the Code to change the password.
+    POST: Changes the password.
+    Args:
+        - request (Request): The incoming request object.
+        - db (Session, optional): The database session. Defaults to Depends(get_db).
+    Returns:
+        - Union[TemplateResponse, RedirectResponse]: The response object based on the request method.
+    If the request method is GET, the response is the rendered HTML template.
+    If the request method is POST, the response is a redirect to the home page.
+    """
+    if request.method == "GET":
+        return temp.TemplateResponse("auth/forgotten.html", {"request": request})
+    elif request.method == "POST":
+        form = await request.form()
+        email = form.get('email')
+        if email:
+            user = get_user_by_email(db, email)
+            if user:
+                session_r, value_r = generate_recovery_session(db, user)
+                if session_r:
+                    flag = await send_email(
+                        db=db,
+                        owner= user,
+                        subject= "Forgotten Password? Here's your recovery session access Weidmüller Data Product API",
+                        template= "forgotten_password.html",
+                        context= {
+                            "access_link": f"{request.base_url}UI/forgotten_password/recovery/?sess={session_r}",
+                            "access_link_disable_link": f"{request.base_url}UI/forgotten_password/recovery/?sess={session_r}&disable=True"
+                        })
+                    if flag:
+                        return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": "Código enviado a su correo."})
+                    elif delete_recovery_session(db=db, value=value_r):
+                        return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": "Algo esta fallando con nuestro servicio de correo, contacte con soporte, le ayudaran con el problema. Lamentamos los inconvenientes"})
+            return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": "El usuario no existe"})    
+                
+@app.get('/UI/forgotten_password/recovery')
+@app.post('/UI/forgotten_password/recovery')
+async def forgotten_password_recovery(request: Request, sess: str, disable: bool = False,db: Session = Depends(get_db)):
+    user = verify_recovery_session(db, sess)
+    if user:
+        if request.method == "GET":
+            message = "Code sent to your email."
+            code = get_code_by_owner_operation(db,user.secret,3)
+            if isinstance(code, Codes):
+                if  check_if_still_on_valid_time(code.valid_until) is False:
+                    if delete_code(db, code):
+                        code,time = generate_security_code(db=db, user=user.secret, operation=3,return_time=True)
+                        if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                            timeleft = time - datetime.now()
+                elif code.value is not None:
+                    #transform valid_until string to datetime to calculate the time left
+                    timeleft = code.valid_until - datetime.now()
+                    message = "Code already sent to your email."
+            elif code is False:
+                code,time = generate_security_code(db=db, user=user.secret, operation=3,return_time=True)
+                if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                    timeleft = time - datetime.now()
+        if request.method == "POST":
+            pass #todo: terminar implementacion y probar
+        return temp.TemplateResponse("auth/forgotten_recovery.html", {"request": request, "path":f"/UI/forgotten_password/recovery/?sess={sess}","message": message,'xpr_tm':timeleft})
+    return {"message": "Session not found"}
+
     
+
 

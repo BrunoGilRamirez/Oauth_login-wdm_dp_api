@@ -55,6 +55,9 @@ class Keys(origin_models.keys):
 class Passwords(origin_models.passwords):
     pass
 
+class RecoverySessions(origin_models.recoverysessions):
+    pass
+
 class SecurityWords(origin_models.securitywords):
     pass
     

@@ -83,6 +83,18 @@ class Password(PasswordBase):
     class Config:
         from_attributes = True
 
+class RecoverySessionBase(BaseModel):
+    owner: str
+    value: str
+    registry: str
+    expires: str
+class RecoverySessionCreate(RecoverySessionBase):
+    pass
+class RecoverySession(RecoverySessionBase):
+    class Config:
+        from_attributes = True
+
+
 class SecurityWordBase(BaseModel):
     word: str
     owner: str

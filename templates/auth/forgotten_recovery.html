@@ -1,0 +1,68 @@
+<!-- lockdown.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cambio de Contraseña</title>
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<link rel="stylesheet" href="/static/css/styles.css">
+<link rel="stylesheet" href="/static/css/password.css">
+<link rel="stylesheet" href="/static/css/auth.css">
+<link rel="stylesheet" href="/static/css/wait.css">
+<link rel="stylesheet" href="/static/css/messages.css">">
+</head>
+    <body onload="enable_pass_block()">
+        {%include 'header/weid_header_nc.html'%}
+        <div class="container">
+            <h2>Restablecer Contraseña</h2>
+            <form action="{{path}}" method="POST">
+                <div class="password-Register-container" id="passwordRegisterContainer">
+                    <label for="password">Contraseña:</label>
+                    <input type="password" id="password" name="password" oninput="disable_box()" required><br><br>
+                    {% include 'pass/rules.html' %}
+                    <div class="confirmPassword" id="confirmPasswordContainer">
+                        <label for="confirmPassword">Confirmar Contraseña:</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" oninput="disable_box()" required>
+                        <p class="error-mess-pass" id="message"></p>
+                    </div>
+                </div>
+                {% include 'transitions/waiting.html' %}
+                <div class="verif-code-container" id="verifCode">
+                    <label for="verificationCode">Código de Verificación:</label>
+                    <input type="text" id="verificationCode" name="verificationCode" oninput="checkVer()" required><br><br>
+                    <p class="feedback" id="feedback">
+                        {% if xpr_tm %}
+                        Se ha enviado un código de verificación a su correo electrónico y expirará a las:  {{ xpr_tm }}
+                        {% endif %}
+                    </p>
+                </div>
+                <input class= "register" type="submit" value="Confirmar Cambios" id="submit" disabled>
+                <!-- arreglar funciones en js -->
+            </form>
+        </div>
+        
+
+    <script src="/static/js/pass_rules_r.js"> </script>
+    <script>
+        function enable_pass_block(){
+            const passwordChangeContainer = document.getElementById('passwordChangeContainer');
+            passwordChangeContainer.classList.toggle('active');
+        }
+
+        function disable_box(){
+                var flag = checkMatch_r();
+                var verifCode = document.getElementById("verifCode");
+                var feedback_space = document.getElementById("feedback");
+                if(flag){
+                    feedback_space.style.display = "block";
+                    verifCode.style.display = "block";
+                }
+                else{
+                    feedback_space.style.display = "none";
+                    verifCode.style.display = "none";
+                }
+            }
+    </script>
+    </body>
+</html>

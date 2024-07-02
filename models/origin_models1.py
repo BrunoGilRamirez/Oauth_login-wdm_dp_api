@@ -61,6 +61,7 @@ class Users(Base):
     codes: Mapped[List['Codes']] = relationship('Codes', uselist=True, back_populates='users')
     keys: Mapped[List['Keys']] = relationship('Keys', uselist=True, back_populates='users')
     passwords: Mapped['Passwords'] = relationship('Passwords', uselist=False, back_populates='users')
+    recovery_sessions: Mapped[List['RecoverySessions']] = relationship('RecoverySessions', uselist=True, back_populates='users')
     security_words: Mapped[List['SecurityWords']] = relationship('SecurityWords', uselist=True, back_populates='users')
     sessions: Mapped[List['Sessions']] = relationship('Sessions', uselist=True, back_populates='users')
 
@@ -117,6 +118,23 @@ class Passwords(Base):
     owner = mapped_column(Text, nullable=False)
 
     users: Mapped['Users'] = relationship('Users', back_populates='passwords')
+
+
+class RecoverySessions(Base):
+    __tablename__ = 'recovery_sessions'
+    __table_args__ = (
+        ForeignKeyConstraint(['owner'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='owner_rs_fk'),
+        PrimaryKeyConstraint('value', name='recovery_sessions_pkey'),
+        Index('fki_owner_rs_fk', 'owner'),
+        {'schema': 'private'}
+    )
+
+    owner = mapped_column(Text, nullable=False)
+    value = mapped_column(Text)
+    registry = mapped_column(DateTime(True), nullable=False)
+    expires = mapped_column(DateTime, nullable=False)
+
+    users: Mapped['Users'] = relationship('Users', back_populates='recovery_sessions')
 
 
 class SecurityWords(Base):
