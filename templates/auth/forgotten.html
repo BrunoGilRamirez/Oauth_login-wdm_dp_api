@@ -7,23 +7,25 @@
         <link rel="stylesheet" href="/static/css/styles.css">
         <link rel="stylesheet" href="/static/css/auth.css">
         <link rel="stylesheet" href="/static/css/messages.css">
+        <link rel="stylesheet" href="/static/css/wait.css">
     </head>
-    <body>
+    <body onload="hideLoader()">
         <div class="container">
             <img class="form-logo" src="/static/weidmueller_logo.svg" alt="Logo">
             <h2>¿Contraseña Olvidada?</h2>
              <p> 
                 No te preocupes, aquí podrás recuperar tu contraseña. <br>
                 Ingresa tu correo electrónico con el que registraste tu cuenta, te haremos llegar un correo electrónico que te ayudara a restablecer tu contraseña. <br>
-                Ojo: Una vez enviado el correo electrónico, tendrás 15 minutos para restablecer tu contraseña. Solo puedes hacer un intento por dia. <br>
-                Si el correo no llega, revisa la carpeta de spam.
              </p>
              <form action="/UI/forgotten_password" method="POST">
                 <input type="email" name="email" placeholder="Correo electrónico" required>
-                <input class="login" type="submit" value="Enviar">
+                <input class="send" type="submit" value="Enviar" onclick="showLoader()">
+                <a href="/UI/login"><input type="button" value="Login Page"></a>
              </form>
         </div>
-
+        {% include 'messages/confirm.html' %}
+        {% include 'transitions/waiting.html' %}
+        <script src="/static/js/waiting.js"></script>
     </body>
 
 </html>

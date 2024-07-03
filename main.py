@@ -408,7 +408,9 @@ async def forgotten_password(request: Request, db: Session = Depends(get_db)):
         if email:
             user = get_user_by_email(db, email)
             if user:
-                session_r, value_r = generate_recovery_session(db, user)
+                client_=str(request.client._asdict())
+                session_r, value_r = generate_recovery_session(db, user, client= client_)
+                message = "El correo ya fue previamente enviado, verifique su bandeja de entrada o spam. Solo puede generar una sesión por dia."
                 if session_r:
                     flag = await send_email(
                         db=db,
@@ -420,16 +422,19 @@ async def forgotten_password(request: Request, db: Session = Depends(get_db)):
                             "access_link_disable_link": f"{request.base_url}UI/forgotten_password/recovery/?sess={session_r}&disable=True"
                         })
                     if flag:
-                        return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": "Código enviado a su correo."})
+                        message = "Correo enviado a su correo electrónico, siga el enlace para restablecer su contraseña."
                     elif delete_recovery_session(db=db, value=value_r):
-                        return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": "Algo esta fallando con nuestro servicio de correo, contacte con soporte, le ayudaran con el problema. Lamentamos los inconvenientes"})
+                        message="Algo esta fallando con nuestro servicio de correo, contacte con soporte, le ayudaran con el problema. Lamentamos los inconvenientes"
+                return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": message})
             return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": "El usuario no existe"})    
                 
 @app.get('/UI/forgotten_password/recovery')
 @app.post('/UI/forgotten_password/recovery')
 async def forgotten_password_recovery(request: Request, sess: str, disable: bool = False,db: Session = Depends(get_db)):
-    user = verify_recovery_session(db, sess)
-    if user:
+    user, stat, session= verify_recovery_session(db, sess)
+    message = "Session not found"
+    context = { "request": request, "path":f"/UI/forgotten_password/recovery/?sess={sess}"}
+    if isinstance(user, Users) and stat == "valid":
         if request.method == "GET":
             message = "Code sent to your email."
             code = get_code_by_owner_operation(db,user.secret,3)
@@ -447,10 +452,28 @@ async def forgotten_password_recovery(request: Request, sess: str, disable: bool
                 code,time = generate_security_code(db=db, user=user.secret, operation=3,return_time=True)
                 if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
                     timeleft = time - datetime.now()
+            context["xpr_tm"] = timeleft.total_seconds()
         if request.method == "POST":
-            pass #todo: terminar implementacion y probar
-        return temp.TemplateResponse("auth/forgotten_recovery.html", {"request": request, "path":f"/UI/forgotten_password/recovery/?sess={sess}","message": message,'xpr_tm':timeleft})
-    return {"message": "Session not found"}
+            form = await request.form()
+            new_pass = form.get('password')
+            verif_code = form.get('verificationCode')
+            print( f"Verification code: {verif_code} and password: {new_pass}")
+            if  new_pass and verif_code:
+                if lockdown_user(db=db, code=verif_code, current_password='', new_password=new_pass, secret=user.secret, only_change=True, type_op=3) and update_recovery_session(db, session, True):
+                    message = "Password changed successfully, all sessions and tokens disabled"
+                    await send_email(db=db,
+                            owner=user, 
+                            subject="Password changed successfully, all sessions and tokens disabled", 
+                            template="confirm_password.html"
+                            )
+                else:
+                    message= "Password change failed, check your current password and the verification code"
+                context["message"]= message
+        context["sess_exp"] = (session.expires - datetime.now()).total_seconds()
+        return temp.TemplateResponse("auth/forgotten_recovery.html", context)
+    elif stat != "unknown":
+        message = f"Session {stat}"
+    return {"message": message}
 
     
 

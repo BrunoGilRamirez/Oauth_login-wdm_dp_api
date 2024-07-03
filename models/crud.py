@@ -374,7 +374,19 @@ def get_recovery_sessions_by_owner_and_expires(db: Session, owner: str, expires:
     except Exception as e:
         traceback.print_exc()
         return None
-    
+
+def update_recovery_session(db: Session, session: RecoverySession , was_used:bool)->bool:
+    try:
+        db.query(RecoverySessions).filter(RecoverySessions.value == session.value).update({
+            RecoverySessions.used: was_used,
+        })
+        db.commit()
+        return True
+    except Exception as e:
+        traceback.print_exc()
+        db.rollback()
+        return False
+
 def delete_recovery_session(db: Session, value: str):
     try:
         recovery_session = db.query(RecoverySessions).filter(RecoverySessions.value == value).first()

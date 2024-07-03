@@ -61,6 +61,18 @@
     cursor: pointer;
     box-sizing: border-box;
 }
+.container input[type= "submit"][class="send"]{
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #4CAF50;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.container input[type= "submit"][class="send"]:hover{
+    background-color: #45a031;
+}
 
 
 /* Agrega otros estilos de autenticación aquí si es necesario */

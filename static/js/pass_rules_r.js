@@ -120,7 +120,7 @@ function checkVer() {
     var submitButton = document.getElementById("submit");
     var errorMessage = document.getElementById("message");
     if (code !== "" && code.length === 8) {
-        if (page === "/UI/user_settings") {
+        if (page === "/UI/forgotten_password/recovery") {
             var box_check = document.getElementById("check-aceptar");
             box_check.style.display = "block";
         }

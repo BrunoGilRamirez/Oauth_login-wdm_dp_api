@@ -1,13 +1,15 @@
 <div class="message-container" id="messageContainer">
-    <p>Mensaje: <span id="message"></span></p>
+    <p>Mensaje: <span id="message_"></span></p>
     <button class="message-button-confirm" onclick="hideError()">Cerrar</button>
 </div>
 {% if message %}
 <script>
     function showError(message) {
         var messageContainer = document.getElementById('messageContainer');
-        var messageElement = document.getElementById('message');
+        var messageElement = document.getElementById('message_');
         messageElement.textContent = message;
+        console.log(message);
+        console.log(messageElement);
         messageContainer.style.display = 'block';
     }
     showError("{{ message }}");

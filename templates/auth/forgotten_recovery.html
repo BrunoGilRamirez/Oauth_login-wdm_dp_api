@@ -1,4 +1,4 @@
-<!-- lockdown.html -->
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10,12 +10,13 @@
 <link rel="stylesheet" href="/static/css/password.css">
 <link rel="stylesheet" href="/static/css/auth.css">
 <link rel="stylesheet" href="/static/css/wait.css">
-<link rel="stylesheet" href="/static/css/messages.css">">
+<link rel="stylesheet" href="/static/css/messages.css">
 </head>
     <body onload="enable_pass_block()">
-        {%include 'header/weid_header_nc.html'%}
+        {% include 'header/weid_header_nc.html' %}
         <div class="container">
             <h2>Restablecer Contraseña</h2>
+            <p>Tiene hasta <span id="sess_exp"></span> para cambiar su contraseña</p>
             <form action="{{path}}" method="POST">
                 <div class="password-Register-container" id="passwordRegisterContainer">
                     <label for="password">Contraseña:</label>
@@ -33,20 +34,20 @@
                     <input type="text" id="verificationCode" name="verificationCode" oninput="checkVer()" required><br><br>
                     <p class="feedback" id="feedback">
                         {% if xpr_tm %}
-                        Se ha enviado un código de verificación a su correo electrónico y expirará a las:  {{ xpr_tm }}
+                            Se ha enviado un código de verificación a su correo electrónico y expirará en: <span id="xpr_tm"></span>
                         {% endif %}
                     </p>
                 </div>
                 <input class= "register" type="submit" value="Confirmar Cambios" id="submit" disabled>
-                <!-- arreglar funciones en js -->
+                <a href="/UI/login"><input type="button" value="Login Page"></a>
             </form>
         </div>
         
-
+        {% include 'messages/confirm.html' %}
     <script src="/static/js/pass_rules_r.js"> </script>
     <script>
         function enable_pass_block(){
-            const passwordChangeContainer = document.getElementById('passwordChangeContainer');
+            const passwordChangeContainer = document.getElementById('passwordRegisterContainer');
             passwordChangeContainer.classList.toggle('active');
         }
 
@@ -63,6 +64,32 @@
                     verifCode.style.display = "none";
                 }
             }
+        w
+        window.onload = function() {
+            // Calcular el tiempo restante
+            var sessExpElement = document.getElementById('sess_exp');
+            var xprTmElement = document.getElementById('xpr_tm');
+            var sessExpSeconds = parseInt("{{ sess_exp }}");
+            var xprTmSeconds = parseInt("{{ xpr_tm }}");
+
+            function formatTimeRemaining(seconds) {
+                var hours = Math.floor(seconds / 3600);
+                var minutes = Math.floor((seconds % 3600) / 60);
+                var seconds = seconds % 60;
+
+                return `${hours}h ${minutes}m ${seconds}s`;
+            }
+
+            if (sessExpElement) {
+                var sessExpDate = new Date(new Date().getTime() + sessExpSeconds * 1000);
+                sessExpElement.textContent = sessExpDate.toLocaleTimeString();
+            }
+
+            if (xprTmElement) {
+                var xprTmDate = new Date(new Date().getTime() + xprTmSeconds * 1000);
+                xprTmElement.textContent = xprTmDate.toLocaleTimeString();
+            }
+        }
     </script>
     </body>
 </html>

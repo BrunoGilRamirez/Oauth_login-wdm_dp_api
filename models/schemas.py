@@ -88,6 +88,8 @@ class RecoverySessionBase(BaseModel):
     value: str
     registry: str
     expires: str
+    used: bool
+    client: str
 class RecoverySessionCreate(RecoverySessionBase):
     pass
 class RecoverySession(RecoverySessionBase):

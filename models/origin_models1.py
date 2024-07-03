@@ -131,8 +131,10 @@ class RecoverySessions(Base):
 
     owner = mapped_column(Text, nullable=False)
     value = mapped_column(Text)
-    registry = mapped_column(DateTime(True), nullable=False)
+    registry = mapped_column(DateTime, nullable=False)
     expires = mapped_column(DateTime, nullable=False)
+    used = mapped_column(Boolean, nullable=False)
+    client = mapped_column(Text, nullable=False)
 
     users: Mapped['Users'] = relationship('Users', back_populates='recovery_sessions')
 

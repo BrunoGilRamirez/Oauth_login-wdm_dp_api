@@ -134,12 +134,13 @@ def generate_security_code(db: Session, user: str, operation:int, return_time: b
     else:
         return False
     
-def generate_recovery_session(db: Session, user: Users) -> tuple[str,str]:
+def generate_recovery_session(db: Session, user: Users, client:str) -> tuple[str,str]:
     """ Generates a recovery session based in a random elements, and register to the database.
 
     Args: 
         - db (Session): The database session.
         - user (Users): The user to generate a recovery session for.
+        - client (str): The client that is using the recovery session.
 
     Returns:
         - str: The generated recovery session.
@@ -150,7 +151,7 @@ def generate_recovery_session(db: Session, user: Users) -> tuple[str,str]:
         if len(r_sessions_created) == 0:
             flag=True
         else:
-                flag= has_24_hours(r_sessions_created[0])
+                flag= has_24_hours(r_sessions_created[0].registry)
         if flag:
             code = str(codes.simple_code(y=16))
             ccode= codes.alphan_code(length=(random.randint(10,20)))
@@ -169,26 +170,35 @@ def generate_recovery_session(db: Session, user: Users) -> tuple[str,str]:
                 owner= user.secret,
                 value= value_r,
                 registry=time.strftime('%Y-%m-%d %H:%M:%S'),
-                expires=time_set
+                expires=time_set,
+                used=False,
+                client=client
             )
 
             if create_recovery_session(db, session_r):
                 return jwt.encode(pre_session, secret_key_ps, algorithm=ALGORITHM), value_r
     
-    return None
+    return None, None
 
-def verify_recovery_session(db: Session, session_: str) -> Users:
+def verify_recovery_session(db: Session, session_: str) -> tuple[Users, str, RecoverySessions]:
     r_session = jwt.decode(session_, secret_key_ps, algorithms=[ALGORITHM])
+    session= None
+    stat="unknown"
     if isinstance(r_session, dict):
         user= get_user_by_email(db, r_session['email'])
         if user:
             time_left = r_session['time_left']
             r_session_stored = get_recovery_sessions_by_owner_and_expires(db, owner= user.secret, expires=time_left)
-            print(f"the dict is {r_session}\n the stored are {r_session_stored}")
-            for session in r_session_stored:
-                if pwd_context.verify(str(r_session), session.value): # todo: check if still valid
-                    return get_user_by_secret(db, session.owner)
-    return None
+            if isinstance(r_session_stored, list) and len(r_session_stored) > 0:
+                print( r_session_stored )
+                for session in r_session_stored:
+                    if check_if_still_on_valid_time(session.expires) and pwd_context.verify(str(r_session), session.value) and session.used == False: # todo: check if still valid
+                        return get_user_by_secret(db, session.owner), "valid", session
+                deltime=r_session_stored[0].expires + timedelta(hours=24) 
+                stat=f"expired, try it after {deltime.strftime('%d-%m at %H:%M:%S')} again."
+            
+            
+    return None, stat, session
 
 
 def forgotten_password(db: Session, user: str, return_time: bool=False)->bool|int|tuple[int,datetime]:
@@ -284,7 +294,7 @@ def authenticate_user(db: Session, username: str, password: str) -> bool|Users:
         return False
     return user
 
-def lockdown_user(db: Session, code: str, current_password: str, new_password: str, secret:str)->str|bool:
+def lockdown_user(db: Session, code: str, current_password: str, new_password: str, secret:str, only_change:bool=False, type_op:int=1)->str|bool:
     """
     Locks down a user by updating their password and invalidating their sessions and keys.
 
@@ -298,17 +308,19 @@ def lockdown_user(db: Session, code: str, current_password: str, new_password: s
     Returns:
         - bool: True if the user was successfully locked down, False otherwise.
     """
-    code = get_code_by_value_operation_owner(db, code, 1, secret)
+    code = get_code_by_value_operation_owner(db, code, type_op, secret)
     still_valid=check_if_still_on_valid_time(code.valid_until) if isinstance(code, Codes) else False
     if isinstance(code, Codes) and still_valid:
         secret = code.owner
         keys = get_keys_by_owner(db, secret)
         sessions = get_sessions_by_owner(db, secret)
-        if verify_password(current_password, get_password_by_owner(db, secret).value):
+        if verify_password(current_password, get_password_by_owner(db, secret).value) or only_change:
+            print ("passed by vrification")
             #update the valid field of all the keys and sessions to False
             if isinstance(keys, list) and isinstance(sessions, list):
                 if update_valid_list_of_sessions(db, sessions) and update_valid_list_of_keys(db, keys) and delete_code(db, code):
                     if update_password(db, secret,get_password_hash(new_password)):
+                        print("Password updated")
                         return True
     return False
 
@@ -529,7 +541,7 @@ def delete_user_session(request: Request, db: Session) -> bool:
     return False
     
 #------------------------------------- async mail sender -------------------------------------
-async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]=None)->bool:
+async def send_email(db:Session, owner: str|User|Users, subject: str, template: str, context: dict[str, str]={})->bool:
     """
     Sends an email to the specified owner.
 
@@ -613,7 +625,7 @@ def clean_form(request: Request):
     
 
 #------------------------------ time --------------------------------
-def has_24_hours(timestamp_str: str) -> bool:
+def has_24_hours(timestamp: datetime) -> bool:
     """
     Checks if the given timestamp is older than 24 hours.
 
@@ -623,7 +635,6 @@ def has_24_hours(timestamp_str: str) -> bool:
     Returns:
         - bool: True if the timestamp is older than 24 hours, False otherwise.
     """
-    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
     time = datetime.now()
     timedelta_ = time - timestamp
     return timedelta_ > timedelta(hours=24)
