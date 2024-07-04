@@ -114,7 +114,10 @@ async def login(request: Request, db: Session = Depends(get_db)):
         return temp.TemplateResponse("auth/login.html", {"request": request, "origin": "UI"})
     elif request.method == "POST":
         form_data = await request.form()
-        user = authenticate_user(db,form_data['email'], form_data['password'])
+        try:
+            user = authenticate_user(db,form_data['email'], form_data['password'])
+        except KeyError:
+            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Invalid email or password"})
         if user is False:
             return temp.TemplateResponse("auth/login.html", {"request": request, "error": "This user does not exist or the password is incorrect"})
         elif user.valid is False:
@@ -429,52 +432,62 @@ async def forgotten_password(request: Request, db: Session = Depends(get_db)):
             return temp.TemplateResponse("auth/forgotten.html", {"request": request, "message": "El usuario no existe"})    
                 
 @app.get('/UI/forgotten_password/recovery')
-@app.post('/UI/forgotten_password/recovery')
-async def forgotten_password_recovery(request: Request, sess: str, disable: bool = False,db: Session = Depends(get_db)):
+async def forgotten_password_recovery(request: Request, sess: str=None, disable: bool = False,db: Session = Depends(get_db)):
+    if sess is None:
+        sess = request.session.get('sess')
     user, stat, session= verify_recovery_session(db, sess)
     message = "Session not found"
-    context = { "request": request, "path":f"/UI/forgotten_password/recovery/?sess={sess}"}
+    context = { "request": request}
     if isinstance(user, Users) and stat == "valid":
-        if request.method == "GET":
-            message = "Code sent to your email."
-            code = get_code_by_owner_operation(db,user.secret,3)
-            if isinstance(code, Codes):
-                if  check_if_still_on_valid_time(code.valid_until) is False:
-                    if delete_code(db, code):
-                        code,time = generate_security_code(db=db, user=user.secret, operation=3,return_time=True)
-                        if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
-                            timeleft = time - datetime.now()
-                elif code.value is not None:
-                    #transform valid_until string to datetime to calculate the time left
-                    timeleft = code.valid_until - datetime.now()
-                    message = "Code already sent to your email."
-            elif code is False:
-                code,time = generate_security_code(db=db, user=user.secret, operation=3,return_time=True)
-                if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
-                    timeleft = time - datetime.now()
-            context["xpr_tm"] = timeleft.total_seconds()
-        if request.method == "POST":
-            form = await request.form()
-            new_pass = form.get('password')
-            verif_code = form.get('verificationCode')
-            print( f"Verification code: {verif_code} and password: {new_pass}")
-            if  new_pass and verif_code:
-                if lockdown_user(db=db, code=verif_code, current_password='', new_password=new_pass, secret=user.secret, only_change=True, type_op=3) and update_recovery_session(db, session, True):
-                    message = "Password changed successfully, all sessions and tokens disabled"
-                    await send_email(db=db,
-                            owner=user, 
-                            subject="Password changed successfully, all sessions and tokens disabled", 
-                            template="confirm_password.html"
-                            )
-                else:
-                    message= "Password change failed, check your current password and the verification code"
-                context["message"]= message
+        request.session['recovery_session'] = sess
+        message = "Code sent to your email."
+        code = get_code_by_owner_operation(db,user.secret,3)
+        if isinstance(code, Codes):
+            if  check_if_still_on_valid_time(code.valid_until) is False:
+                if delete_code(db, code):
+                    code,time = generate_security_code(db=db, user=user.secret, operation=3,return_time=True)
+                    if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                        timeleft = time - datetime.now()
+            elif code.value is not None:
+                #transform valid_until string to datetime to calculate the time left
+                timeleft = code.valid_until - datetime.now()
+                message = "Code already sent to your email."
+        elif code is False:
+            code,time = generate_security_code(db=db, user=user.secret, operation=3,return_time=True)
+            if await send_email(db,owner=user,subject="Security Code",template="pass_change.html",context={"username": user.name, "code": code}):
+                timeleft = time - datetime.now()
+        context["xpr_tm"] = timeleft.total_seconds()
         context["sess_exp"] = (session.expires - datetime.now()).total_seconds()
         return temp.TemplateResponse("auth/forgotten_recovery.html", context)
     elif stat != "unknown":
         message = f"Session {stat}"
+        request.session.pop('recovery_session',None)
     return {"message": message}
 
-    
 
-
+@app.post('/UI/forgotten_password/recovery')
+async def forgotten_password_recovery_post(request: Request, db: Session = Depends(get_db)):
+    sess = request.session.get("recovery_session", '')
+    user, stat, session= verify_recovery_session(db, sess)
+    message = "Session not found"
+    context = { "request": request}
+    if isinstance(user, Users) and stat == "valid":
+        form = await request.form()
+        new_pass = form.get('password')
+        verif_code = form.get('verificationCode')
+        print( f"Verification code: {verif_code} and password: {new_pass}")
+        if  new_pass and verif_code:
+            if lockdown_user(db=db, code=verif_code, current_password='', new_password=new_pass, secret=user.secret, only_change=True, type_op=3) and update_recovery_session(db, session, True):
+                message = "Password changed successfully, all sessions and tokens disabled"
+                await send_email(db=db,
+                        owner=user, 
+                        subject="Password changed successfully, all sessions and tokens disabled", 
+                        template="confirm_password.html"
+                        )
+                request.session.pop('recovery_session')
+            else:
+                message= "Password change failed, check your current password and the verification code"
+            context["message"]= message
+        context["sess_exp"] = (session.expires - datetime.now()).total_seconds()
+        return temp.TemplateResponse("auth/forgotten_recovery.html", context)
+    return RedirectResponse(url="/UI/login", status_code=303)

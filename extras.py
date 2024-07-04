@@ -181,7 +181,10 @@ def generate_recovery_session(db: Session, user: Users, client:str) -> tuple[str
     return None, None
 
 def verify_recovery_session(db: Session, session_: str) -> tuple[Users, str, RecoverySessions]:
-    r_session = jwt.decode(session_, secret_key_ps, algorithms=[ALGORITHM])
+    try:
+        r_session = jwt.decode(session_, secret_key_ps, algorithms=[ALGORITHM])
+    except JWTError:
+        return None, "invalid", None
     session= None
     stat="unknown"
     if isinstance(r_session, dict):

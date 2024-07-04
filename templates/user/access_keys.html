@@ -7,8 +7,9 @@
 <link rel="stylesheet" href="/static/css/styles.css">
 <link rel="stylesheet" href="/static/css/user.css">
 <link rel="stylesheet" href="/static/css/wait.css">
+<link rel="stylesheet" href="/static/css/messages.css">
 </head>
-<body onload="header_animation()">
+<body onload="header_animation(); initializeValidityCheck();">
     {% include 'header/weid_header.html' %}
     <h1>Claves de Acceso</h1>
     <div class="table-container">
@@ -17,6 +18,7 @@
                 <th>Token de Acceso</th>
                 <th>Creada</th>
                 <th>Expira</th>
+                <th>estatus</th>
                 <th>Acciones</th>
             </tr>
             {% for key in keys %}
@@ -26,6 +28,7 @@
                 </td>
                 <td>{{ key.registry }}</td>
                 <td>{{ key.valid_until }}</td>
+                <td id="valid{{ key.id }}"></td>
                 <td>
                     <button class="delete-btn" onclick="deleteKey('{{ key.id }}')">Eliminar</button>
                     <button class="copy-btn" onclick="copyToClipboard('keyValue{{ key.id }}')">Copiar</button>
@@ -44,5 +47,32 @@
 
     <script src="/static/js/ac_keys.js"></script>
     <script src="/static/js/header.js"></script>
+    <script>
+        function checkValidity(id, valid, valid_until){
+            var current_date = new Date();
+            var tdvalid = document.getElementById("valid" + id);
+
+            // get the current date and time and compare with valid_until if still valid
+            if ((current_date < new Date(valid_until)) && (valid === 'True')) {
+                tdvalid.innerHTML = "Valido";
+            }
+            if ((current_date > new Date(valid_until)) && (valid === 'True')) {
+                tdvalid.innerHTML = "Expirado";
+            }
+            if ((current_date < new Date(valid_until)) && (valid === 'False')) {
+                tdvalid.innerHTML = "Invalidado";
+            }
+            if ((current_date > new Date(valid_until)) && (valid === 'False')) {
+                tdvalid.innerHTML = "Expirado";
+            }
+        }
+
+        function initializeValidityCheck() {
+            {% for key in keys %}
+            checkValidity('{{ key.id }}', '{{ key.valid }}', '{{ key.valid_until }}');
+            {% endfor %}
+        }
+    </script>
 </body>
 </html>
+

@@ -26,4 +26,8 @@
         - modules_toadd: 
             - main.py: the endpoint function 
             - extras.py: A limiter for codes daily generated, a user code generator for forgotten protocole. 
+        - status: done
+    - tofix: post forgotten_password endpoint
+        - description: need to fix the post forgotten password endpoint
+        - files: main.py
         - status: testing

@@ -17,7 +17,7 @@
         <div class="container">
             <h2>Restablecer Contraseña</h2>
             <p>Tiene hasta <span id="sess_exp"></span> para cambiar su contraseña</p>
-            <form action="{{path}}" method="POST">
+            <form action="/UI/forgotten_password/recovery" method="POST">
                 <div class="password-Register-container" id="passwordRegisterContainer">
                     <label for="password">Contraseña:</label>
                     <input type="password" id="password" name="password" oninput="disable_box()" required><br><br>
@@ -64,7 +64,7 @@
                     verifCode.style.display = "none";
                 }
             }
-        w
+
         window.onload = function() {
             // Calcular el tiempo restante
             var sessExpElement = document.getElementById('sess_exp');
