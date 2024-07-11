@@ -30,4 +30,9 @@
     - tofix: post forgotten_password endpoint
         - description: need to fix the post forgotten password endpoint
         - files: main.py
-        - status: testing
+        - status: done
+    - toadd: employer's domain verification
+        - description: verify if the email from register form, fits with employer's domain. if not, the user cannot register at least uses a official work email.
+        - files: main.py, extras.py, register.html
+        - status: done
+

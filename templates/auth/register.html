@@ -21,9 +21,14 @@
             <input type="text" id="role" name="role" required><br><br>
             <label for="email">Email:</label>
             <input type="email" id="email" name="email" required><br><br>
-            <label for="employer">Empleador:</label>
-            <input type="text" id="employer" name="employer" required><br><br>
-            <label for="security">Palabra de Seguridad:</label>
+            <label for="employer">Empleador:</label> <br>
+            <select name="employer" id="employer" required>
+                {% for employer in employers %}
+                    <option value="{{ employer.id }}">{{ employer.name }}</option>
+                {% endfor %}
+            </select>
+            <br> <br> <br>
+            <label for="security">Frase o Palabra de Seguridad:</label>
             <input type="text" id="security" name="security" required><br><br>
             {% include 'pass/password_block_register.html' %}
             <input class= "register" type="submit" value="Registrarse" id="submit" disabled>

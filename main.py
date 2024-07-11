@@ -86,16 +86,16 @@ async def register(request: Request, db: Session = Depends(get_db)):
     Returns:
         - Union[TemplateResponse, RedirectResponse]: The response object based on the request method and registration outcome.
     """
+    empleadores = get_empleadores(db) #TODO: end in extras a domain check
     if request.method == "GET":
-        return temp.TemplateResponse("auth/register.html", {"request": request})
+        return temp.TemplateResponse("auth/register.html", {"request": request, "employers": empleadores})
     elif request.method == "POST":
-        feedback = await register_user(request, db)
-        if isinstance(feedback, str) and feedback != "User already exists":
+        confirm,feedback = await register_user(request, db)
+        if confirm and isinstance(feedback,str):
             return RedirectResponse(url="/UI/login", status_code=303)
-        elif feedback == False:
-            return temp.TemplateResponse("auth/register.html", {"request": request, "error": feedback})
-        elif feedback == "User already exists":
-            return temp.TemplateResponse("auth/register.html", {"request": request, "error": feedback})
+        elif confirm and feedback is None:
+            feedback= "Your email was not sent. Please, try to log in, after this will be sent again in a few minutes."
+        return temp.TemplateResponse("auth/register.html", {"request": request, "error": feedback, "employers": empleadores})
     
 @app.get("/UI/login", response_class=HTMLResponse)
 @app.post("/UI/login", response_class=RedirectResponse)
@@ -112,52 +112,47 @@ async def login(request: Request, db: Session = Depends(get_db)):
     """
     if request.method == "GET":
         return temp.TemplateResponse("auth/login.html", {"request": request, "origin": "UI"})
-    elif request.method == "POST":
+    
+    if request.method == "POST":
         form_data = await request.form()
-        try:
-            user = authenticate_user(db,form_data['email'], form_data['password'])
-        except KeyError:
-            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Invalid email or password"})
-        if user is False:
-            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "This user does not exist or the password is incorrect"})
-        elif user.valid is False:
-            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "You need to verify your account with the URL sent to your registered email."})
-        client_=str(request.client._asdict())
-        session_secret,code_,time_created_ = create_session_secret(context=pwd_context ,secret=user.secret, metadata=str(request.headers.items()), client=client_)
-        data={"sub": session_secret}
-        access_token, expires = encrypt_data(data, timedelta(days=14))
-        meta=request.headers.items()
-        meta=str(meta)
-        flag=create_session(db, 
-                       SessionCreate(owner=user.secret, 
-                                     registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-                                     valid_until=expires.strftime('%Y-%m-%d %H:%M:%S'), 
-                                     valid=True, 
-                                     metadata_=meta, 
-                                     client=client_,
-                                     value=access_token,
-                                     code=code_,
-                                     time_created=time_created_
-                                     )
-                                )
-        if not flag:
-            return temp.TemplateResponse("auth/login.html", {"request": request, "error": "Session creation failed"})
+        user = authenticate_user(db,form_data['email'], form_data['password'])
+        if user is not None:
+            if user.valid is not False:
+                client_=str(request.client._asdict())
+                session_secret,code_,time_created_ = create_session_secret(context=pwd_context ,secret=user.secret, metadata=str(request.headers.items()), client=client_)
+                data={"sub": session_secret}
+                access_token, expires = encrypt_data(data, timedelta(days=14))
+                meta=request.headers.items()
+                meta=str(meta)
+                if create_session(db, SessionCreate(owner=user.secret, 
+                                            registry=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
+                                            valid_until=expires.strftime('%Y-%m-%d %H:%M:%S'), 
+                                            valid=True, 
+                                            metadata_=meta, 
+                                            client=client_,
+                                            value=access_token,
+                                            code=code_,
+                                            time_created=time_created_
+                                            )
+                                        ):
+                    if await send_email(db,owner=user.secret, 
+                            subject="Nuevo inicio de sesión", 
+                            template="new_session.html", 
+                            context={"username": user.name, 
+                                        "creation_date": datetime.now().strftime("%d/%m/%Y"), 
+                                        "metadata": client_, 
+                                        "link":f"{request.base_url}lockdown/{encode_secret(access_token)}"
+                                        }):
+                        pass # TODO: introduce a module to handle all the non-sent mails
+                    request.session['access_token'] = access_token 
+                    return RedirectResponse(url="/UI/home", status_code=status.HTTP_302_FOUND)
+            else:
+                errorMessage = "You need to verify your account with the URL sent to your registered email."
         else:
-            email_sended=await send_email(db,owner=user.secret, 
-                       subject="Nuevo inicio de sesión", 
-                       template="new_session.html", 
-                       context={"username": user.name, 
-                                "creation_date": datetime.now().strftime("%d/%m/%Y"), 
-                                "metadata": client_, 
-                                "link":f"{request.base_url}lockdown/{encode_secret(access_token)}"
-                                }
-                        )
-            if not email_sended:
-                print("Email not sent")
-            request.session['access_token'] = access_token 
-            redirect = RedirectResponse(url="/UI/home", status_code=status.HTTP_302_FOUND)
+            errorMessage = "This user does not exist or the password is incorrect"
+
+        return temp.TemplateResponse("auth/login.html", {"request": request, "error": errorMessage})
         
-        return redirect
 
 @app.get("/UI/home", response_class=HTMLResponse)
 @app.post("/UI/home", response_class=HTMLResponse)

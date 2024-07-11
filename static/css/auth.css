@@ -16,7 +16,7 @@
     text-align: center;
     margin-bottom: 20px;
 }
-
+.container select,
 .container input[type="text"],
 .container input[type="email"],
 .container input[type="password"],
