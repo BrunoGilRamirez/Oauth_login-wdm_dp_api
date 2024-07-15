@@ -8,3 +8,4 @@ schemas1.py
 .env.local
 .vscode/launch.json
 .vscode
+run.py

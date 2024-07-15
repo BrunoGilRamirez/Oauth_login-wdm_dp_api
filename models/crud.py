@@ -25,6 +25,8 @@ def get_companies_by_name(db: Session, name: str):
         return companies.id
     else:
         return False
+def get_company_by_id(db:Session, id: int) -> Companies|bool:
+    return db.query(Companies).filter(Companies.id == id).first()
 def update_company(db: Session, company_id: int, company: CompanyCreate) -> Companies|bool:
     try:
         db.query(Companies).filter(Companies.id == company_id).update(company.model_dump())
