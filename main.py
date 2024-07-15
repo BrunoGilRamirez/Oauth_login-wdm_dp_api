@@ -4,9 +4,6 @@ It includes various endpoints for user registration, login, home page, user sett
 """
 
 import os
-# Rest of the code...
-import os
-from turtle import st
 #local imports
 from models.models import *
 from models.schemas import *
