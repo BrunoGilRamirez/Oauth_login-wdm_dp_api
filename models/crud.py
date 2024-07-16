@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, DateTime
+from sqlalchemy import desc, DateTime, exc
 from models.models import *
 from models.schemas import *
 from datetime import datetime
@@ -398,4 +398,43 @@ def delete_recovery_session(db: Session, value: str):
     except Exception as e:
         traceback.print_exc()
         db.rollback()
+        return False
+
+#------------------- login Attempts -------------------
+
+def create_login_attempt(db: Session, login_attempt: LoginAttemptCreate) -> bool:
+    new_login_attempt = LoginAttempts(**login_attempt.model_dump())
+    try:
+        db.add(new_login_attempt)
+        db.commit()
+        return True
+    except exc.SQLAlchemyError:
+        print("caught by create_login_attempt module")
+        db.rollback()
+        traceback.print_exc()
+        return False
+    
+def get_loginAttempts_by_userSecret(db:Session, secret:str)-> list[LoginAttempts]:
+    attempts=[]
+    try:
+        attempts= db.query(LoginAttempts).filter(LoginAttempts.user == secret).all()
+    except exc.SQLAlchemyError:
+        print("failed to get all the attempt from user: ",secret)
+    return attempts
+
+def get_loginAttempts_by_userSecret_date(db:Session, secret:str, twenty_four_hours_ago:datetime)-> list[LoginAttempts]:
+    attempts=[]
+    try:
+        attempts= db.query(LoginAttempts).filter(LoginAttempts.user == secret, LoginAttempts.registry > twenty_four_hours_ago).all()
+    except exc.SQLAlchemyError:
+        print("failed to get all the attempt from user: ",secret)
+    return attempts
+
+def delete_loginAttempt(db: Session, attempt: LoginAttempts)-> bool:
+    try:
+        db.delete(attempt)
+        db.commit()
+        return True
+    except exc.SQLAlchemyError:
+        print("Failed to delete the attempt: ",attempt)
         return False

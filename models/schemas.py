@@ -72,6 +72,17 @@ class Key(KeyBase):
     class Config:
         from_attributes = True
 
+class LoginAttemptBase(BaseModel):
+    user: str
+    registry: str
+    host: str
+class LoginAttemptCreate(LoginAttemptBase):
+    pass
+class LoginAttempt(LoginAttemptBase):
+    id: int
+    class Config:
+        from_attributes = True
+
 class PasswordBase(BaseModel):
     value: str
     owner: str
