@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, SmallInteger, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, Sequence, SmallInteger, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.orm.base import Mapped
 
@@ -60,6 +60,7 @@ class Users(Base):
     companies: Mapped['Companies'] = relationship('Companies', back_populates='users')
     codes: Mapped[List['Codes']] = relationship('Codes', uselist=True, back_populates='users')
     keys: Mapped[List['Keys']] = relationship('Keys', uselist=True, back_populates='users')
+    login_attempts: Mapped[List['LoginAttempts']] = relationship('LoginAttempts', uselist=True, back_populates='users')
     passwords: Mapped['Passwords'] = relationship('Passwords', uselist=False, back_populates='users')
     recovery_sessions: Mapped[List['RecoverySessions']] = relationship('RecoverySessions', uselist=True, back_populates='users')
     security_words: Mapped[List['SecurityWords']] = relationship('SecurityWords', uselist=True, back_populates='users')
@@ -101,6 +102,22 @@ class Keys(Base):
     metadata_ = mapped_column('metadata', Text)
 
     users: Mapped['Users'] = relationship('Users', back_populates='keys')
+
+
+class LoginAttempts(Base):
+    __tablename__ = 'login_attempts'
+    __table_args__ = (
+        ForeignKeyConstraint(['user'], ['private.users.secret'], ondelete='CASCADE', onupdate='CASCADE', name='user_id_fk'),
+        PrimaryKeyConstraint('id', name='tries_login_pkey'),
+        {'schema': 'private'}
+    )
+
+    user = mapped_column(Text, nullable=False)
+    registry = mapped_column(DateTime, nullable=False)
+    host = mapped_column(Text, nullable=False)
+    id = mapped_column(BigInteger, Sequence('tries_login_id_seq', schema='private'))
+
+    users: Mapped['Users'] = relationship('Users', back_populates='login_attempts')
 
 
 class Passwords(Base):

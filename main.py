@@ -113,7 +113,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
     
     if request.method == "POST":
         form_data = await request.form()
-        user = authenticate_user(db,form_data['email'], form_data['password'])
+        user, errorMessage = authenticate_user(db,form_data['email'], form_data['password'], True, str(request.client._asdict())  )
         if user is not None:
             if user.valid is not False:
                 client_=str(request.client._asdict())
@@ -146,9 +146,6 @@ async def login(request: Request, db: Session = Depends(get_db)):
                     return RedirectResponse(url="/UI/home", status_code=status.HTTP_303_SEE_OTHER)
             else:
                 errorMessage = "You need to verify your account with the URL sent to your registered email."
-        else:
-            errorMessage = "This user does not exist or the password is incorrect"
-
         return temp.TemplateResponse("auth/login.html", {"request": request, "error": errorMessage})
         
 

@@ -283,7 +283,7 @@ async def register_user(request: Request, db: Session) -> tuple[bool, str]:
 def get_empleadores(db: Session) -> list[Companies]:
     return get_companies(db)
 
-def authenticate_user(db: Session, username: str, password: str) ->Users:
+def authenticate_user(db: Session, username: str, password: str,verbose:bool=False, client: str='') ->Users|tuple[str,Users]:
     """
     Authenticates a user by checking if the provided username and password match the stored credentials.
 
@@ -296,9 +296,48 @@ def authenticate_user(db: Session, username: str, password: str) ->Users:
         - user (Users): Returns the user object if authentication is successful, otherwise returns False.
     """
     user = get_user_by_email(db, username)
-    if  user and verify_password(password, get_password_by_owner(db, user.secret).value):
-        return user
-    return None
+    message = (None, "Password is not correct or user does not exist") if verbose else None
+    if  user:
+        against_BruteForce_flag =countVerify_attempts(db,user)
+        if verify_password(password, get_password_by_owner(db, user.secret).value) and against_BruteForce_flag:
+            return (user,"OK") if verbose else user
+        elif not against_BruteForce_flag:
+            message = (None,"The user has reached the maximum of attempts") if verbose else user
+        if against_BruteForce_flag:
+            print(f"The attempt was registered of the user: {user} was registered? {regist_attempt(db, user, client)}")
+    return message
+def countVerify_attempts(db: Session, user: Users) -> bool:
+    """
+    Counts the number of attempts to login in the las 24 hours. 
+    The maximum number of attempts is set to 5 per day.
+    Args:
+        - session (Session): The database session object.
+        - user (Users): The user object.
+    Returns:
+        - bool: Returns True if the number of attempts is less than 5, False otherwise.
+    """
+    now = datetime.now()
+    deltTime = now - timedelta(hours=24)
+    attempts = get_loginAttempts_by_userSecret_date(db, user.secret, deltTime)
+    print(attempts)
+    if len(attempts) < 5:
+        return True
+    return False
+
+def regist_attempt(db:Session, user: Users, client: str):
+    """
+    This method registers if an attempt to login ocurred.
+    Args:
+        - session (Session): The database session object.
+        - user (Users): The user object.
+    Returns:
+        - bool: Returns True if it was successfully registered """
+    now = datetime.now()
+    attempt_=LoginAttemptCreate(user = user.secret,
+                                registry = now.strftime('%Y-%m-%d %H:%M:%S'),
+                                host = client)
+    return create_login_attempt(db, attempt_)
+    
 
 def lockdown_user(db: Session, code: str, current_password: str, new_password: str, secret:str, only_change:bool=False, type_op:int=1)->str|bool:
     """

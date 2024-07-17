@@ -51,6 +51,9 @@ class Keys(origin_models.keys):
     def to_dict(self):
         return {'id': self.id, 'owner': self.owner, 'value': self.value, 'registry': self.registry, 'valid_until': self.valid_until, 'valid': self.valid}
 
+class LoginAttempts(origin_models.loginattempts):
+    def __repr__(self):
+        return f'attempt(id={self.id}, user={self.user}, registry={self.registry}, host={self.host} )'
 
 class Passwords(origin_models.passwords):
     pass
