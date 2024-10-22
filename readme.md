@@ -1,11 +1,11 @@
-# API de Autenticación de Weidmüller
+# API de Autenticación
 
-La API de Autenticación de Weidmüller es una aplicación en Python construida con FastAPI que permite a los usuarios solicitar acceso a otra API que proporciona información sobre los productos de Weidmüller.
+La API de Autenticación es una aplicación en Python construida con FastAPI que permite a los usuarios solicitar acceso a otra API que proporciona información sobre los productos.
 
 
 ## Endpoints
 
-La API de Autenticación de Weidmüller proporciona los siguientes endpoints:
+La API de Autenticación de proporciona los siguientes endpoints:
 
 - `/login`: Permite a los usuarios autenticarse y obtener un token de acceso.
 
